@@ -6,10 +6,11 @@ import time
 import matplotlib.pyplot as plt
 import requests
 
+# --- Función de Envío a Discord ---
 def send_discord_alert(sensor_value, anomaly_type):
     DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1389093241013407885/zVYNx5TuL8bO0Wyln4irru67BIhuTFa3H4zTIC5ln0iqph1sKaG5WlUhOIWZ-RxMM1Ot" 
 
-    if DISCORD_WEBHOOK_URL == "TU_WEBHOOK_DE_DISCORD_AQUI":
+    if DISCORD_WEBHOOK_URL == "TU_WEBHOOK_DE_DISCORD_AQUI": 
         st.warning("🚨 ADVERTENCIA: La URL del Webhook de Discord no está configurada. La alerta no se enviará a Discord.")
         return
 
@@ -40,8 +41,15 @@ def send_discord_alert(sensor_value, anomaly_type):
     except requests.exceptions.RequestException as e:
         st.error(f"Error al enviar alerta a Discord: {e}")
 
+# --- NEW: Inicialización de Session State para contadores y velocidad ---
+if 'total_anomalies_detected' not in st.session_state:
+    st.session_state['total_anomalies_detected'] = 0
+if 'total_alerts_sent' not in st.session_state:
+    st.session_state['total_alerts_sent'] = 0
+if 'simulation_speed' not in st.session_state:
+    st.session_state['simulation_speed'] = 0.5 # Velocidad por defecto
 
-st.set_page_config(page_title="Monitor de Sensor de Temperatura", layout="wide")
+st.set_page_config(page_title="Monitor de Sensor de Temperatura", layout="wide") 
 
 plt.rcParams['text.color'] = 'white'
 plt.rcParams['axes.labelcolor'] = 'white'
@@ -68,9 +76,21 @@ data_for_model_training = temperatura_con_fallos_entrenamiento.reshape(-1, 1)
 model = IsolationForest(contamination=0.03, random_state=42)
 model.fit(data_for_model_training)
 
+# --- Configuración del Cooldown para Alertas ---
 if 'last_alert_time' not in st.session_state:
     st.session_state['last_alert_time'] = 0 
-COOLDOWN_SECONDS = 30 
+COOLDOWN_SECONDS = 60 
+
+# --- NEW: Control de Velocidad de Simulación en la sidebar ---
+st.sidebar.header("Control de Simulación")
+st.session_state['simulation_speed'] = st.sidebar.slider(
+    "Velocidad de Lectura (segundos por lectura)",
+    min_value=0.1, max_value=2.0, value=0.5, step=0.1,
+    help="Define el tiempo de espera entre cada lectura simulada."
+)
+
+# --- NEW: Indicador Visual de Estado del Monitoreo (Contenedor) ---
+status_indicator_container = st.empty() 
 
 st.title("🌡️ Sistema de Predicción de Fallos en Sensor de Temperatura")
 st.markdown("---")
@@ -85,6 +105,15 @@ st.markdown("""
 
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
+
+# --- NEW: KPIs Display ---
+kpi_container = st.container() 
+with kpi_container:
+    col1, col2 = st.columns(2) 
+    with col1:
+        st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
+    with col2:
+        st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
 lectura_actual_container = st.empty()
 estado_lectura_container = st.empty()
@@ -121,7 +150,10 @@ for i in range(1, 51):
     color_lectura = "green"
     mensaje_alerta = ""
 
+    # --- Update total anomalies counter ---
     if prediccion == -1:
+        st.session_state['total_anomalies_detected'] += 1 
+
         estado_lectura = "ANOMALÍA DETECTADA"
         color_lectura = "red"
         mensaje_alerta = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
@@ -133,12 +165,20 @@ for i in range(1, 51):
         if (current_time - st.session_state['last_alert_time']) > COOLDOWN_SECONDS:
             send_discord_alert(nueva_lectura, tipo_anomalia) 
             st.session_state['last_alert_time'] = current_time 
+            st.session_state['total_alerts_sent'] += 1 # Increment alerts sent
             st.info(f"✅ Alerta de Discord enviada (próxima alerta en {COOLDOWN_SECONDS}s).")
         else:
             tiempo_restante = int(COOLDOWN_SECONDS - (current_time - st.session_state['last_alert_time']))
             st.warning(f"⚠️ Anomalía detectada, pero alerta omitida (cooldown activo). Próxima alerta en {tiempo_restante} segundos.")
     else:
         alerta_container.empty()
+
+    # --- Update Visual Status Indicator ---
+    with status_indicator_container:
+        if estado_lectura == "ANOMALÍA DETECTADA":
+            st.error("🔴 ESTADO ACTUAL: ANOMALÍA DETECTADA")
+        else:
+            st.success("🟢 ESTADO ACTUAL: Normal")
 
     nueva_fila_historial = pd.DataFrame([{
         'Hora': time.strftime('%H:%M:%S'),
@@ -186,6 +226,7 @@ for i in range(1, 51):
         st.subheader("Historial de Lecturas Recientes")
         st.dataframe(historial_lecturas_df.tail(15).style.applymap(lambda x: 'background-color: #ffe6e6' if 'ANOMALÍA' in str(x) else '', subset=['Estado']))
 
-    time.sleep(0.5)
+    # --- Use Simulation Speed from Slider ---
+    time.sleep(st.session_state['simulation_speed']) 
 
 st.success("✅ Simulación de monitoreo de sensor de temperatura finalizada.")
