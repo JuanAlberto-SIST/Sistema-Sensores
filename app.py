@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import requests
 
-def send_discord_alert(sensor_value, anomaly_type):
+def send_discord_alert(sensor_value, anomaly_type, action_suggestion_text): # Recibe la sugerencia de acción
     DISCORD_WEBHOOK_URL = st.secrets["DISCORD_WEBHOOK_URL"] 
 
     if not DISCORD_WEBHOOK_URL:
@@ -19,7 +19,8 @@ def send_discord_alert(sensor_value, anomaly_type):
         "embeds": [
             {
                 "title": "🚨 ALERTA: Anomalía Detectada en Sensor de Temperatura",
-                "description": f"Se ha detectado una **ANOMALÍA** en el sensor de temperatura.",
+                "description": f"Se ha detectado una **ANOMALÍA** en el sensor de temperatura.\n\n" # Añade salto de línea
+                               f"**Sugerencia de Acción:** {action_suggestion_text}", # Agrega la sugerencia aquí
                 "color": 15548997, 
                 "fields": [
                     {"name": "Tipo de Anomalía", "value": anomaly_type, "inline": True},
@@ -79,45 +80,16 @@ if 'last_alert_time' not in st.session_state:
     st.session_state['last_alert_time'] = 0 
 COOLDOWN_SECONDS = 60 
 
-st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
-st.markdown("---")
+# --- AQUI SE HA ELIMINADO LA BARRA LATERAL Y SU CONTENIDO ---
+# st.sidebar.header("Control de Simulación")
+# st.session_state['simulation_speed'] = st.sidebar.slider(...)
 
-st.header("Análisis de Viabilidad del Emprendimiento")
-st.markdown("") 
-
-st.subheader("Contexto y Declaración del Problema")
-with st.expander("Ver el problema que resolvemos..."): 
-    st.markdown("""
-    Las **fallas frecuentes en sensores de temperatura industrial** generan mediciones imprecisas que afectan la calidad del producto y la seguridad operativa. Sensores inexactos causan **combustión ineficiente, más emisiones y gasto extra**. Esto provoca **paros no planificados, pérdida de calidad en productos, riesgos para la seguridad industrial y mayores costos**.
-    """)
-st.markdown("---") 
-
-st.subheader("Nuestra Solución: Sensores Inteligentes y Software")
-with st.expander("Descubrir cómo lo solucionamos..."): 
-    st.markdown("""
-    **Precisa Temp** ofrece **sensores inteligentes y software que previenen fallas en temperatura para procesos industriales**. Nuestro sistema monitorea sensores térmicos en **tiempo real** y **detecta fallas para evitar paros y mejorar la eficiencia industrial**. Combina **autodiagnóstico en tiempo real con mantenimiento predictivo basado en machine learning**, integrándose fácilmente a sistemas existentes.
-    """)
-st.markdown("---") 
-
-st.subheader("Beneficios Clave de Precisa Temp")
-with st.expander("Explorar los beneficios..."): 
-    st.markdown("""
-    * **Beneficios Funcionales:** Medición precisa y continua de la temperatura. Detección temprana de variaciones para evitar daños en equipos. Reducción de tiempos de inactividad mediante alertas preventivas.
-    * **Beneficios Emocionales:** Proporciona tranquilidad y confianza al saber que los equipos están protegidos y los procesos funcionan sin riesgos ni pérdidas.
-    * **Beneficios para la Sociedad:** Mejora la eficiencia energética y reduce el consumo, disminuyendo emisiones contaminantes.
-    """)
-st.markdown("---") 
-
-st.header("Demostración del Monitoreo en Tiempo Real")
-st.markdown("") 
-
-
-st.sidebar.header("Control de Simulación")
-st.session_state['simulation_speed'] = st.sidebar.slider(
-    "Velocidad de Lectura (segundos por lectura)",
-    min_value=0.1, max_value=2.0, value=0.5, step=0.1,
-    help="Define el tiempo de espera entre cada lectura simulada."
-)
+# --- AQUI SE HAN ELIMINADO LAS SECCIONES DE INTRODUCCIÓN ---
+# st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
+# st.markdown("---")
+# st.header("Análisis de Viabilidad del Emprendimiento")
+# ... y todo el contenido de los expanders ...
+# st.header("Demostración del Monitoreo en Tiempo Real")
 
 status_indicator_container = st.empty() 
 
@@ -129,6 +101,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# El título principal de la página ahora es este, directamente visible
+st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
+st.markdown("---")
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
@@ -194,7 +169,7 @@ for i in range(1, 51):
 
         current_time = time.time()
         if (current_time - st.session_state['last_alert_time']) > COOLDOWN_SECONDS:
-            send_discord_alert(nueva_lectura, tipo_anomalia) 
+            send_discord_alert(nueva_lectura, tipo_anomalia, sugerencia_accion) # Pasa la sugerencia de acción a Discord
             st.session_state['last_alert_time'] = current_time 
             st.session_state['total_alerts_sent'] += 1 
             st.info(f"✅ Alerta de Discord enviada (próxima alerta en {COOLDOWN_SECONDS}s).")
