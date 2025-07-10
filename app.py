@@ -66,13 +66,20 @@ temperatura_con_fallos_entrenamiento[350:355] = np.random.uniform(40, 50, 5)
 
 data_for_model_training = temperatura_con_fallos_entrenamiento.reshape(-1, 1)
 
-model = IsolationForest(contamination=0.03, random_state=42)
+# NEW: Inicialización de Session State para 'contamination_value' (se mantiene)
+if 'contamination_value' not in st.session_state:
+    st.session_state['contamination_value'] = 0.03 
+
+# El modelo se inicializa con el valor del slider (que ahora está en la página principal)
+model = IsolationForest(contamination=st.session_state['contamination_value'], random_state=42)
 model.fit(data_for_model_training)
+
 
 if 'total_anomalies_detected' not in st.session_state:
     st.session_state['total_anomalies_detected'] = 0
 if 'total_alerts_sent' not in st.session_state:
     st.session_state['total_alerts_sent'] = 0
+# NEW: simulation_speed ya no es un slider, pero se define para evitar NameError
 if 'simulation_speed' not in st.session_state:
     st.session_state['simulation_speed'] = 0.5 
 
@@ -165,27 +172,47 @@ div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
 </style>
 """, unsafe_allow_html=True)
 
+# --- AQUI SE HAN ELIMINADO LAS SECCIONES DE INTRODUCCIÓN ---
+# st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores") (este título se movió arriba)
+# st.markdown("---") (este markdown se movió arriba)
+# st.header("Análisis de Viabilidad del Emprendimiento")
+# ... y todo el contenido de los expanders ...
+# st.header("Demostración del Monitoreo en Tiempo Real") (este header se movió más abajo)
 
-st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
-st.markdown("---")
+
+st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores") # Título principal de la página
+st.markdown("---") # Separador debajo del título
 
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# Contenedor principal para el diseño en columnas (KPIs + Slider de velocidad)
-# El slider de velocidad es fijo en 0.5s y ya no es un slider visible.
-# Los KPIs siguen siendo relevantes
-control_cols = st.columns(2) # Dos columnas ahora: una para KPIs, otra para el placeholder del slider o espacio extra
+# --- CONTROLES DE SIMULACIÓN Y MODELO EN COLUMNAS DE PÁGINA PRINCIPAL ---
+control_cols = st.columns(3) # Tres columnas para KPIs, Velocidad y Contamination
 
-with control_cols[0]: # Columna izquierda para KPIs
+with control_cols[0]: # Columna para KPIs
     kpi_cols = st.columns(2) 
     with kpi_cols[0]:
         st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
     with kpi_cols[1]:
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-with control_cols[1]: # Columna derecha que antes tenía el slider, ahora vacío o con otro elemento
-    st.write("") # Un poco de espacio o puedes poner otro KPI si quieres
+with control_cols[1]: # Columna para el slider de Velocidad
+    st.markdown("##### Control de Simulación") # Título para el slider
+    st.session_state['simulation_speed'] = st.slider(
+        "Velocidad de Lectura (segundos por lectura)",
+        min_value=0.1, max_value=2.0, value=0.5, step=0.1,
+        help="Define el tiempo de espera entre cada lectura simulada."
+    )
+
+with control_cols[2]: # Columna para el slider de Sensibilidad de IA
+    st.markdown("##### Control de Modelo IA")
+    st.session_state['contamination_value'] = st.slider(
+        "Sensibilidad Detección (Contamination)",
+        min_value=0.01, max_value=0.10, value=st.session_state['contamination_value'], step=0.005,
+        format="%.3f",
+        help="Proporción esperada de anomalías. Mayor valor = más sensible."
+    )
+
 
 st.markdown("---") # Separador visual
 
