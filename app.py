@@ -66,14 +66,8 @@ temperatura_con_fallos_entrenamiento[350:355] = np.random.uniform(40, 50, 5)
 
 data_for_model_training = temperatura_con_fallos_entrenamiento.reshape(-1, 1)
 
-# --- NEW: Inicialización de Session State para 'contamination_value' ---
-if 'contamination_value' not in st.session_state:
-    st.session_state['contamination_value'] = 0.03 # Valor por defecto
-
-# El modelo se inicializa con el valor del slider (que ahora está en la página principal)
-model = IsolationForest(contamination=st.session_state['contamination_value'], random_state=42)
+model = IsolationForest(contamination=0.03, random_state=42)
 model.fit(data_for_model_training)
-
 
 if 'total_anomalies_detected' not in st.session_state:
     st.session_state['total_anomalies_detected'] = 0
@@ -86,47 +80,13 @@ if 'last_alert_time' not in st.session_state:
     st.session_state['last_alert_time'] = 0 
 COOLDOWN_SECONDS = 60 
 
-
-st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
-st.markdown("---")
-
-st.header("Análisis de Viabilidad del Emprendimiento")
-st.markdown("") 
-
-st.subheader("Contexto y Declaración del Problema")
-with st.expander("Ver el problema que resolvemos..."): 
-    st.markdown("""
-    Las **fallas frecuentes en sensores de temperatura industrial** generan mediciones imprecisas que afectan la calidad del producto y la seguridad operativa. Sensores inexactos causan **combustión ineficiente, más emisiones y gasto extra**. Esto provoca **paros no planificados, pérdida de calidad en productos, riesgos para la seguridad industrial y mayores costos**.
-    """)
-st.markdown("---") 
-
-st.subheader("Nuestra Solución: Sensores Inteligentes y Software")
-with st.expander("Descubrir cómo lo solucionamos..."): 
-    st.markdown("""
-    **Precisa Temp** ofrece **sensores inteligentes y software que previenen fallas en temperatura para procesos industriales**. Nuestro sistema monitorea sensores térmicos en **tiempo real** y **detecta fallas para evitar paros y mejorar la eficiencia industrial**. Combina **autodiagnóstico en tiempo real con mantenimiento predictivo basado en machine learning**, integrándose fácilmente a sistemas existentes.
-    """)
-st.markdown("---") 
-
-st.subheader("Beneficios Clave de Precisa Temp")
-with st.expander("Explorar los beneficios..."): 
-    st.markdown("""
-    * **Beneficios Funcionales:** Medición precisa y continua de la temperatura. Detección temprana de variaciones para evitar daños en equipos. Reducción de tiempos de inactividad mediante alertas preventivas.
-    * **Beneficios Emocionales:** Proporciona tranquilidad y confianza al saber que los equipos están protegidos y los procesos funcionan sin riesgos ni pérdidas.
-    * **Beneficios para la Sociedad:** Mejora la eficiencia energética y reduce el consumo, disminuyendo emisiones contaminantes.
-    """)
-st.markdown("---") 
-
-st.header("Demostración del Monitoreo en Tiempo Real")
-st.markdown("") 
-
-
 status_indicator_container = st.empty() 
 
 st.markdown("""
 <style>
 /* Fondo general y texto principal */
 .stApp {
-    background-color: #222222; /* Un gris oscuro más suave */
+    background-color: #1a1a1a; /* Un gris muy oscuro profesional */
     color: #e0e0e0; /* Texto principal casi blanco */
 }
 /* Títulos y subtítulos */
@@ -206,35 +166,26 @@ div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
 """, unsafe_allow_html=True)
 
 
+st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
+st.markdown("---")
+
+
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# --- CONTROLES DE SIMULACIÓN Y MODELO EN COLUMNAS DE PÁGINA PRINCIPAL ---
-control_cols = st.columns(3) # Tres columnas para KPIs, Velocidad y Contamination
+# Contenedor principal para el diseño en columnas (KPIs + Slider de velocidad)
+# El slider de velocidad es fijo en 0.5s y ya no es un slider visible.
+# Los KPIs siguen siendo relevantes
+control_cols = st.columns(2) # Dos columnas ahora: una para KPIs, otra para el placeholder del slider o espacio extra
 
-with control_cols[0]: # Columna para KPIs
+with control_cols[0]: # Columna izquierda para KPIs
     kpi_cols = st.columns(2) 
     with kpi_cols[0]:
         st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
     with kpi_cols[1]:
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-with control_cols[1]: # Columna para el slider de Velocidad
-    st.markdown("##### Control de Simulación") # Título para el slider
-    st.session_state['simulation_speed'] = st.slider(
-        "Velocidad de Lectura (segundos por lectura)",
-        min_value=0.1, max_value=2.0, value=0.5, step=0.1,
-        help="Define el tiempo de espera entre cada lectura simulada."
-    )
-
-with control_cols[2]: # Columna para el slider de Sensibilidad de IA
-    st.markdown("##### Control de Modelo IA")
-    st.session_state['contamination_value'] = st.slider(
-        "Sensibilidad Detección (Contamination)",
-        min_value=0.01, max_value=0.10, value=st.session_state['contamination_value'], step=0.005,
-        format="%.3f",
-        help="Proporción esperada de anomalías. Mayor valor = más sensible."
-    )
-
+with control_cols[1]: # Columna derecha que antes tenía el slider, ahora vacío o con otro elemento
+    st.write("") # Un poco de espacio o puedes poner otro KPI si quieres
 
 st.markdown("---") # Separador visual
 
@@ -331,7 +282,7 @@ for i in range(1, 51):
         df_para_grafico = historial_lecturas_df.tail(num_lecturas_grafico).reset_index()
 
         line_chart = alt.Chart(df_para_grafico).mark_line(color='#00FFFF').encode( 
-            x=alt.X('Hora', axis=None), # Volvemos a usar 'Hora' en el eje X para el gráfico
+            x=alt.X('Hora', axis=None), 
             y=alt.Y('valor_numerico', title='Temperatura (°C)'),
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
@@ -345,7 +296,7 @@ for i in range(1, 51):
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
             color='#FF0000', filled=True, size=100, shape='cross'
         ).encode(
-            x=alt.X('Hora'), # Usar 'Hora' también aquí
+            x=alt.X('Hora'), 
             y=alt.Y('valor_numerico'),
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
