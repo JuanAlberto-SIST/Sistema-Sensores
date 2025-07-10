@@ -4,8 +4,8 @@ import pandas as pd
 from sklearn.ensemble import IsolationForest
 import time
 import matplotlib.pyplot as plt
-import altair as alt
 import requests
+import altair as alt
 
 def send_discord_alert(sensor_value, anomaly_type, action_suggestion_text):
     DISCORD_WEBHOOK_URL = st.secrets["DISCORD_WEBHOOK_URL"] 
@@ -80,46 +80,6 @@ if 'last_alert_time' not in st.session_state:
     st.session_state['last_alert_time'] = 0 
 COOLDOWN_SECONDS = 60 
 
-st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
-st.markdown("---")
-
-st.header("Análisis de Viabilidad del Emprendimiento")
-st.markdown("") 
-
-st.subheader("Contexto y Declaración del Problema")
-with st.expander("Ver el problema que resolvemos..."): 
-    st.markdown("""
-    Las **fallas frecuentes en sensores de temperatura industrial** generan mediciones imprecisas que afectan la calidad del producto y la seguridad operativa. Sensores inexactos causan **combustión ineficiente, más emisiones y gasto extra**. Esto provoca **paros no planificados, pérdida de calidad en productos, riesgos para la seguridad industrial y mayores costos**.
-    """)
-st.markdown("---") 
-
-st.subheader("Nuestra Solución: Sensores Inteligentes y Software")
-with st.expander("Descubrir cómo lo solucionamos..."): 
-    st.markdown("""
-    **Precisa Temp** ofrece **sensores inteligentes y software que previenen fallas en temperatura para procesos industriales**. Nuestro sistema monitorea sensores térmicos en **tiempo real** y **detecta fallas para evitar paros y mejorar la eficiencia industrial**. Combina **autodiagnóstico en tiempo real con mantenimiento predictivo basado en machine learning**, integrándose fácilmente a sistemas existentes.
-    """)
-st.markdown("---") 
-
-st.subheader("Beneficios Clave de Precisa Temp")
-with st.expander("Explorar los beneficios..."): 
-    st.markdown("""
-    * **Beneficios Funcionales:** Medición precisa y continua de la temperatura. Detección temprana de variaciones para evitar daños en equipos. Reducción de tiempos de inactividad mediante alertas preventivas.
-    * **Beneficios Emocionales:** Proporciona tranquilidad y confianza al saber que los equipos están protegidos y los procesos funcionan sin riesgos ni pérdidas.
-    * **Beneficios para la Sociedad:** Mejora la eficiencia energética y reduce el consumo, disminuyendo emisiones contaminantes.
-    """)
-st.markdown("---") 
-
-st.header("Demostración del Monitoreo en Tiempo Real")
-st.markdown("") 
-
-
-st.sidebar.header("Control de Simulación")
-st.session_state['simulation_speed'] = st.sidebar.slider(
-    "Velocidad de Lectura (segundos por lectura)",
-    min_value=0.1, max_value=2.0, value=0.5, step=0.1,
-    help="Define el tiempo de espera entre cada lectura simulada."
-)
-
 status_indicator_container = st.empty() 
 
 st.markdown("""
@@ -129,6 +89,10 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
+
+st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
+st.markdown("---")
 
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
@@ -230,33 +194,44 @@ for i in range(1, 51):
     with grafico_container.container():
         st.subheader("Gráfico de Tendencia de Temperatura")
         num_lecturas_grafico = 50 
-        df_para_grafico = historial_lecturas_df.tail(num_lecturas_grafico)
+        df_para_grafico = historial_lecturas_df.tail(num_lecturas_grafico).reset_index()
 
-        fig, ax = plt.subplots(figsize=(6, 2.5))
-        
-        ax.plot(df_para_grafico['Hora'], df_para_grafico['valor_numerico'], label='Temperatura', color='skyblue', linewidth=2)
-        
-        anomalias_grafico = df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']
-        if not anomalias_grafico.empty:
-            ax.scatter(anomalias_grafico['Hora'], anomalias_grafico['valor_numerico'], color='red', s=100, marker='X', linewidths=1, edgecolors='white', label='Anomalía')
+        line_chart = alt.Chart(df_para_grafico).mark_line(color='#00FFFF').encode( 
+            x=alt.X('index', axis=None), 
+            y=alt.Y('valor_numerico', title='Temperatura (°C)'),
+            tooltip=[
+                alt.Tooltip('Hora', title='Hora'), 
+                alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
+                alt.Tooltip('Estado', title='Estado')
+            ]
+        ).properties(
+            title=f'Últimas {num_lecturas_grafico} Lecturas de Temperatura'
+        )
 
-        ax.set_xlabel('Hora', fontsize=10)
-        ax.set_ylabel('Temperatura (°C)', fontsize=10)
-        ax.set_title(f'Últimas {num_lecturas_grafico} Lecturas de Temperatura', fontsize=12)
-        
-        ax.tick_params(axis='x', rotation=45, labelsize=8)
-        ax.tick_params(axis='y', labelsize=8)
-        
-        ax.legend(fontsize=9, loc='upper left')
-        ax.grid(True, linestyle='--', alpha=0.5)
-        plt.tight_layout()
+        anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
+            color='#FF0000', filled=True, size=100, shape='cross'
+        ).encode(
+            x=alt.X('index'),
+            y=alt.Y('valor_numerico'),
+            tooltip=[
+                alt.Tooltip('Hora', title='Hora'), 
+                alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
+                alt.Tooltip('Estado', title='Estado'),
+                alt.Tooltip('Tipo de Anomalía', title='Tipo Anomalía')
+            ]
+        )
 
-        st.pyplot(fig)
-        plt.close(fig)
+        chart = alt.layer(line_chart, anomaly_points).interactive() 
+        
+        st.altair_chart(chart, use_container_width=True)
 
     with historico_container.container():
         st.subheader("Historial de Lecturas Recientes")
-        st.dataframe(historial_lecturas_df.tail(15).style.applymap(lambda x: 'background-color: #ffe6e6' if 'ANOMALÍA' in str(x) else '', subset=['Estado']))
+        def highlight_anomalies(s):
+            return ['background-color: #FFCCCC; color: #333333' if 'ANOMALÍA' in str(v) else '' for v in s]
+
+        st.dataframe(historial_lecturas_df.tail(15).style.apply(highlight_anomalies, axis=1))
+
 
     time.sleep(st.session_state['simulation_speed']) 
 
