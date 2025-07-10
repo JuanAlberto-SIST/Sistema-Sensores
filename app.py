@@ -66,16 +66,11 @@ temperatura_con_fallos_entrenamiento[350:355] = np.random.uniform(40, 50, 5)
 
 data_for_model_training = temperatura_con_fallos_entrenamiento.reshape(-1, 1)
 
-# --- NEW: Slider para ajustar 'contamination' y recalcular el modelo ---
-st.sidebar.header("Control de Modelo IA")
-st.session_state['contamination_value'] = st.sidebar.slider(
-    "Sensibilidad de Detección (Contamination)",
-    min_value=0.01, max_value=0.10, value=0.03, step=0.005,
-    format="%.3f",
-    help="Define la proporción esperada de anomalías en los datos. Valores más altos detectan más anomalías."
-)
+# --- NEW: Inicialización de Session State para 'contamination_value' ---
+if 'contamination_value' not in st.session_state:
+    st.session_state['contamination_value'] = 0.03 # Valor por defecto
 
-# El modelo se inicializa con el valor del slider
+# El modelo se inicializa con el valor del slider (que ahora está en la página principal)
 model = IsolationForest(contamination=st.session_state['contamination_value'], random_state=42)
 model.fit(data_for_model_training)
 
@@ -90,6 +85,7 @@ if 'simulation_speed' not in st.session_state:
 if 'last_alert_time' not in st.session_state:
     st.session_state['last_alert_time'] = 0 
 COOLDOWN_SECONDS = 60 
+
 
 st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
 st.markdown("---")
@@ -123,10 +119,6 @@ st.markdown("---")
 st.header("Demostración del Monitoreo en Tiempo Real")
 st.markdown("") 
 
-
-# --- ELIMINADA LA BARRA LATERAL FIJA DEL SLIDER DE VELOCIDAD, AHORA ESTARÁ EN LA PRINCIPAL
-# st.sidebar.header("Control de Simulación")
-# st.session_state['simulation_speed'] = st.sidebar.slider(...)
 
 status_indicator_container = st.empty() 
 
@@ -178,12 +170,12 @@ h1, h2, h3, h4, h5, h6 {
     padding: 8px;
 }
 /* Estilo para el resaltado de anomalías en la tabla */
-.stDataFrame tbody tr td:nth-child(3) div[data-value*="ANOMALÍA"] { /* Esto apunta a la columna Estado */
+.stDataFrame tbody tr td:nth-child(3) div[data-value*="ANOMALÍA"] { 
     background-color: #FF6347 !important; /* Rojo tomate, más vibrante */
     color: white !important;
     font-weight: bold;
 }
-.stDataFrame tbody tr td div[data-value*="ANOMALÍA"] { /* Estilo para cualquier celda con ANOMALÍA */
+.stDataFrame tbody tr td div[data-value*="ANOMALÍA"] { 
     background-color: #FF6347 !important; 
     color: white !important;
 }
@@ -195,40 +187,52 @@ div[data-testid="stAlert"] {
     margin-bottom: 10px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
 }
-div[data-testid="stAlert"] .st-bv { /* Mensajes de info/warning/success */
-    background-color: #333333; /* Un fondo neutro para mensajes */
+div[data-testid="stAlert"] .st-bv { 
+    background-color: #333333; 
     color: #f0f0f0;
 }
-div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] { /* Ajuste para el texto dentro de la alerta */
+div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] { 
     font-size: 1.1em;
 }
 div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
-    color: #f0f0f0; /* Color del texto dentro de la alerta */
+    color: #f0f0f0; 
 }
 
-
+/* Ocultar la barra lateral por completo */
+[data-testid="stSidebar"] {
+    display: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# Contenedor principal para el diseño en columnas (KPIs + Slider de velocidad)
-top_section_cols = st.columns([0.7, 0.3]) # Columna principal para monitoreo, columna pequeña para controles
+# --- CONTROLES DE SIMULACIÓN Y MODELO EN COLUMNAS DE PÁGINA PRINCIPAL ---
+control_cols = st.columns(3) # Tres columnas para KPIs, Velocidad y Contamination
 
-with top_section_cols[0]: # Columna izquierda para KPIs
+with control_cols[0]: # Columna para KPIs
     kpi_cols = st.columns(2) 
     with kpi_cols[0]:
         st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
     with kpi_cols[1]:
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-with top_section_cols[1]: # Columna derecha para el slider de velocidad (ahora está en la columna principal)
+with control_cols[1]: # Columna para el slider de Velocidad
     st.markdown("##### Control de Simulación") # Título para el slider
     st.session_state['simulation_speed'] = st.slider(
         "Velocidad de Lectura (segundos por lectura)",
         min_value=0.1, max_value=2.0, value=0.5, step=0.1,
         help="Define el tiempo de espera entre cada lectura simulada."
+    )
+
+with control_cols[2]: # Columna para el slider de Sensibilidad de IA
+    st.markdown("##### Control de Modelo IA")
+    st.session_state['contamination_value'] = st.slider(
+        "Sensibilidad Detección (Contamination)",
+        min_value=0.01, max_value=0.10, value=st.session_state['contamination_value'], step=0.005,
+        format="%.3f",
+        help="Proporción esperada de anomalías. Mayor valor = más sensible."
     )
 
 
@@ -327,7 +331,7 @@ for i in range(1, 51):
         df_para_grafico = historial_lecturas_df.tail(num_lecturas_grafico).reset_index()
 
         line_chart = alt.Chart(df_para_grafico).mark_line(color='#00FFFF').encode( 
-            x=alt.X('index', axis=None), 
+            x=alt.X('Hora', axis=None), # Volvemos a usar 'Hora' en el eje X para el gráfico
             y=alt.Y('valor_numerico', title='Temperatura (°C)'),
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
@@ -341,7 +345,7 @@ for i in range(1, 51):
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
             color='#FF0000', filled=True, size=100, shape='cross'
         ).encode(
-            x=alt.X('index'),
+            x=alt.X('Hora'), # Usar 'Hora' también aquí
             y=alt.Y('valor_numerico'),
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
