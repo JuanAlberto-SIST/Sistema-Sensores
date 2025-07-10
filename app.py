@@ -4,6 +4,7 @@ import pandas as pd
 from sklearn.ensemble import IsolationForest
 import time
 import matplotlib.pyplot as plt
+import altair as alt
 import requests
 
 def send_discord_alert(sensor_value, anomaly_type, action_suggestion_text):
@@ -19,8 +20,8 @@ def send_discord_alert(sensor_value, anomaly_type, action_suggestion_text):
         "embeds": [
             {
                 "title": "🚨 ALERTA: Anomalía Detectada en Sensor de Temperatura",
-                "description": f"Se ha detectado una **ANOMALÍA** en el sensor de temperatura.\n\n" # Añade salto de línea
-                               f"**Sugerencia de Acción:** {action_suggestion_text}", # Agrega la sugerencia aquí
+                "description": f"Se ha detectado una **ANOMALÍA** en el sensor de temperatura.\n\n"
+                               f"**Sugerencia de Acción:** {action_suggestion_text}",
                 "color": 15548997, 
                 "fields": [
                     {"name": "Tipo de Anomalía", "value": anomaly_type, "inline": True},
@@ -43,15 +44,14 @@ def send_discord_alert(sensor_value, anomaly_type, action_suggestion_text):
 
 st.set_page_config(page_title="Precisa Temp", layout="wide") 
 
-# --- Configuración de Matplotlib para Tema Oscuro Profesional ---
-plt.rcParams['text.color'] = '#e0e0e0' # Texto casi blanco
-plt.rcParams['axes.labelcolor'] = '#e0e0e0'
-plt.rcParams['xtick.color'] = '#e0e0e0'
-plt.rcParams['ytick.color'] = '#e0e0e0' 
-plt.rcParams['axes.facecolor'] = '#2a2a2a' # Fondo más oscuro para el área del gráfico
-plt.rcParams['figure.facecolor'] = '#2a2a2a' # Fondo de la figura
-plt.rcParams['grid.color'] = '#4a4a4a' # Cuadrícula más oscura y sutil
-plt.rcParams['legend.facecolor'] = '#2a2a2a' # Fondo de la leyenda
+plt.rcParams['text.color'] = 'white'
+plt.rcParams['axes.labelcolor'] = 'white'
+plt.rcParams['xtick.color'] = 'white'
+plt.rcParams['ytick.color'] = 'white' 
+plt.rcParams['axes.facecolor'] = '#1a1a1a'
+plt.rcParams['figure.facecolor'] = '#1a1a1a'
+plt.rcParams['grid.color'] = '#404040'
+plt.rcParams['legend.facecolor'] = '#2a2a2a'
 
 np.random.seed(42)
 
@@ -80,76 +80,73 @@ if 'last_alert_time' not in st.session_state:
     st.session_state['last_alert_time'] = 0 
 COOLDOWN_SECONDS = 60 
 
-# --- AQUI SE ELIMINARON TODAS LAS SECCIONES DE INTRODUCCIÓN Y BARRA LATERAL PARA UN DISEÑO LIMPIO ---
-# El contenido se organiza ahora en "st.tabs" si lo quieres reintroducir después
+st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
+st.markdown("---")
+
+st.header("Análisis de Viabilidad del Emprendimiento")
+st.markdown("") 
+
+st.subheader("Contexto y Declaración del Problema")
+with st.expander("Ver el problema que resolvemos..."): 
+    st.markdown("""
+    Las **fallas frecuentes en sensores de temperatura industrial** generan mediciones imprecisas que afectan la calidad del producto y la seguridad operativa. Sensores inexactos causan **combustión ineficiente, más emisiones y gasto extra**. Esto provoca **paros no planificados, pérdida de calidad en productos, riesgos para la seguridad industrial y mayores costos**.
+    """)
+st.markdown("---") 
+
+st.subheader("Nuestra Solución: Sensores Inteligentes y Software")
+with st.expander("Descubrir cómo lo solucionamos..."): 
+    st.markdown("""
+    **Precisa Temp** ofrece **sensores inteligentes y software que previenen fallas en temperatura para procesos industriales**. Nuestro sistema monitorea sensores térmicos en **tiempo real** y **detecta fallas para evitar paros y mejorar la eficiencia industrial**. Combina **autodiagnóstico en tiempo real con mantenimiento predictivo basado en machine learning**, integrándose fácilmente a sistemas existentes.
+    """)
+st.markdown("---") 
+
+st.subheader("Beneficios Clave de Precisa Temp")
+with st.expander("Explorar los beneficios..."): 
+    st.markdown("""
+    * **Beneficios Funcionales:** Medición precisa y continua de la temperatura. Detección temprana de variaciones para evitar daños en equipos. Reducción de tiempos de inactividad mediante alertas preventivas.
+    * **Beneficios Emocionales:** Proporciona tranquilidad y confianza al saber que los equipos están protegidos y los procesos funcionan sin riesgos ni pérdidas.
+    * **Beneficios para la Sociedad:** Mejora la eficiencia energética y reduce el consumo, disminuyendo emisiones contaminantes.
+    """)
+st.markdown("---") 
+
+st.header("Demostración del Monitoreo en Tiempo Real")
+st.markdown("") 
+
+
+st.sidebar.header("Control de Simulación")
+st.session_state['simulation_speed'] = st.sidebar.slider(
+    "Velocidad de Lectura (segundos por lectura)",
+    min_value=0.1, max_value=2.0, value=0.5, step=0.1,
+    help="Define el tiempo de espera entre cada lectura simulada."
+)
 
 status_indicator_container = st.empty() 
 
-# --- NUEVO CSS para el fondo general CLARO (más limpio y profesional) ---
 st.markdown("""
 <style>
 .stApp {
-    background-color: #222222; /* Fondo gris oscuro suave */
-    color: #e0e0e0; /* Texto principal casi blanco */
-}
-h1, h2, h3, h4, h5, h6 {
-    color: #f0f0f0; /* Títulos más claros */
-}
-.stMetric > div { /* Estilo para los KPIs */
-    background-color: #333333;
-    border-radius: 8px;
-    padding: 10px;
-    color: #f0f0f0;
-}
-.stMetric label {
-    color: #a0a0a0; /* Etiquetas de KPI más suaves */
-}
-.stExpander { /* Estilo para los expanders si se usan */
-    background-color: #333333;
-    border-radius: 8px;
-    padding: 10px;
+    background-color: #1a1a1a;
 }
 </style>
 """, unsafe_allow_html=True)
 
 
-st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
-st.markdown("---")
-
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# --- NUEVA ESTRUCTURA DE LAYOUT Y KPIs ---
-main_cols = st.columns([0.7, 0.3]) # Columna principal para monitoreo, columna pequeña para controles
-
-with main_cols[0]: # Columna principal izquierda
-    kpi_cols = st.columns(2) 
-    with kpi_cols[0]:
+kpi_container = st.container() 
+with kpi_container:
+    col1, col2 = st.columns(2) 
+    with col1:
         st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
-    with kpi_cols[1]:
+    with col2:
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-    st.markdown("---") # Separador visual
-
-    lectura_actual_container = st.empty()
-    estado_lectura_container = st.empty()
-    alerta_container = st.empty()
-    action_suggestion_container = st.empty() # Mover contenedor de sugerencia aquí para que esté cerca de la alerta
-
-    st.subheader("Gráfico de Tendencia de Temperatura")
-    grafico_container = st.empty() # Definir gráfico contenedor aquí
-    
-    st.subheader("Historial de Lecturas Recientes")
-    historico_container = st.empty() # Definir historial contenedor aquí
-
-with main_cols[1]: # Columna derecha (para el slider de velocidad)
-    st.sidebar.header("Control de Simulación")
-    st.session_state['simulation_speed'] = st.sidebar.slider(
-        "Velocidad de Lectura (segundos por lectura)",
-        min_value=0.1, max_value=2.0, value=0.5, step=0.1,
-        help="Define el tiempo de espera entre cada lectura simulada."
-    )
-    st.markdown("---") # Separador
-
+lectura_actual_container = st.empty()
+estado_lectura_container = st.empty()
+alerta_container = st.empty()
+grafico_container = st.empty()
+historico_container = st.empty()
+action_suggestion_container = st.empty()
 
 historial_columnas = ['Hora', 'Lectura (°C)', 'Estado', 'Tipo de Anomalía', 'valor_numerico']
 historial_lecturas_df = pd.DataFrame(columns=historial_columnas)
@@ -178,7 +175,7 @@ for i in range(1, 51):
         tipo_anomalia = "Valor Constante"
         sugerencia_accion = "Inspeccionar el sensor por posibles fallas de congelación, cortocircuito o falta de comunicación." 
 
-    prediccion = model.predict(np.array(nueva_lectura).reshape(1, -1))
+    prediccion = model.predict(np.array(nueva_lectura).reshape(-1, 1))
 
     estado_lectura = "Normal"
     color_lectura = "green"
@@ -237,11 +234,11 @@ for i in range(1, 51):
 
         fig, ax = plt.subplots(figsize=(6, 2.5))
         
-        ax.plot(df_para_grafico['Hora'], df_para_grafico['valor_numerico'], label='Temperatura', color='#00FFFF', linewidth=2) # Color cian para la línea
+        ax.plot(df_para_grafico['Hora'], df_para_grafico['valor_numerico'], label='Temperatura', color='skyblue', linewidth=2)
         
         anomalias_grafico = df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']
         if not anomalias_grafico.empty:
-            ax.scatter(anomalias_grafico['Hora'], anomalias_grafico['valor_numerico'], color='#FF0000', s=100, marker='X', linewidths=1, edgecolors='white', label='Anomalía') # Rojo para anomalías
+            ax.scatter(anomalias_grafico['Hora'], anomalias_grafico['valor_numerico'], color='red', s=100, marker='X', linewidths=1, edgecolors='white', label='Anomalía')
 
         ax.set_xlabel('Hora', fontsize=10)
         ax.set_ylabel('Temperatura (°C)', fontsize=10)
