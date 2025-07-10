@@ -66,8 +66,19 @@ temperatura_con_fallos_entrenamiento[350:355] = np.random.uniform(40, 50, 5)
 
 data_for_model_training = temperatura_con_fallos_entrenamiento.reshape(-1, 1)
 
-model = IsolationForest(contamination=0.03, random_state=42)
+# --- NEW: Slider para ajustar 'contamination' y recalcular el modelo ---
+st.sidebar.header("Control de Modelo IA")
+st.session_state['contamination_value'] = st.sidebar.slider(
+    "Sensibilidad de Detección (Contamination)",
+    min_value=0.01, max_value=0.10, value=0.03, step=0.005,
+    format="%.3f",
+    help="Define la proporción esperada de anomalías en los datos. Valores más altos detectan más anomalías."
+)
+
+# El modelo se inicializa con el valor del slider
+model = IsolationForest(contamination=st.session_state['contamination_value'], random_state=42)
 model.fit(data_for_model_training)
+
 
 if 'total_anomalies_detected' not in st.session_state:
     st.session_state['total_anomalies_detected'] = 0
@@ -79,6 +90,43 @@ if 'simulation_speed' not in st.session_state:
 if 'last_alert_time' not in st.session_state:
     st.session_state['last_alert_time'] = 0 
 COOLDOWN_SECONDS = 60 
+
+st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
+st.markdown("---")
+
+st.header("Análisis de Viabilidad del Emprendimiento")
+st.markdown("") 
+
+st.subheader("Contexto y Declaración del Problema")
+with st.expander("Ver el problema que resolvemos..."): 
+    st.markdown("""
+    Las **fallas frecuentes en sensores de temperatura industrial** generan mediciones imprecisas que afectan la calidad del producto y la seguridad operativa. Sensores inexactos causan **combustión ineficiente, más emisiones y gasto extra**. Esto provoca **paros no planificados, pérdida de calidad en productos, riesgos para la seguridad industrial y mayores costos**.
+    """)
+st.markdown("---") 
+
+st.subheader("Nuestra Solución: Sensores Inteligentes y Software")
+with st.expander("Descubrir cómo lo solucionamos..."): 
+    st.markdown("""
+    **Precisa Temp** ofrece **sensores inteligentes y software que previenen fallas en temperatura para procesos industriales**. Nuestro sistema monitorea sensores térmicos en **tiempo real** y **detecta fallas para evitar paros y mejorar la eficiencia industrial**. Combina **autodiagnóstico en tiempo real con mantenimiento predictivo basado en machine learning**, integrándose fácilmente a sistemas existentes.
+    """)
+st.markdown("---") 
+
+st.subheader("Beneficios Clave de Precisa Temp")
+with st.expander("Explorar los beneficios..."): 
+    st.markdown("""
+    * **Beneficios Funcionales:** Medición precisa y continua de la temperatura. Detección temprana de variaciones para evitar daños en equipos. Reducción de tiempos de inactividad mediante alertas preventivas.
+    * **Beneficios Emocionales:** Proporciona tranquilidad y confianza al saber que los equipos están protegidos y los procesos funcionan sin riesgos ni pérdidas.
+    * **Beneficios para la Sociedad:** Mejora la eficiencia energética y reduce el consumo, disminuyendo emisiones contaminantes.
+    """)
+st.markdown("---") 
+
+st.header("Demostración del Monitoreo en Tiempo Real")
+st.markdown("") 
+
+
+# --- ELIMINADA LA BARRA LATERAL FIJA DEL SLIDER DE VELOCIDAD, AHORA ESTARÁ EN LA PRINCIPAL
+# st.sidebar.header("Control de Simulación")
+# st.session_state['simulation_speed'] = st.sidebar.slider(...)
 
 status_indicator_container = st.empty() 
 
@@ -163,14 +211,10 @@ div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
 """, unsafe_allow_html=True)
 
 
-st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
-st.markdown("---")
-
-
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# Contenedor para KPIs y controles de velocidad (para que estén juntos)
-top_section_cols = st.columns([0.7, 0.3])
+# Contenedor principal para el diseño en columnas (KPIs + Slider de velocidad)
+top_section_cols = st.columns([0.7, 0.3]) # Columna principal para monitoreo, columna pequeña para controles
 
 with top_section_cols[0]: # Columna izquierda para KPIs
     kpi_cols = st.columns(2) 
@@ -179,9 +223,9 @@ with top_section_cols[0]: # Columna izquierda para KPIs
     with kpi_cols[1]:
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-with top_section_cols[1]: # Columna derecha para el slider (sin barra lateral)
+with top_section_cols[1]: # Columna derecha para el slider de velocidad (ahora está en la columna principal)
     st.markdown("##### Control de Simulación") # Título para el slider
-    st.session_state['simulation_speed'] = st.slider( # Ahora es st.slider, no st.sidebar.slider
+    st.session_state['simulation_speed'] = st.slider(
         "Velocidad de Lectura (segundos por lectura)",
         min_value=0.1, max_value=2.0, value=0.5, step=0.1,
         help="Define el tiempo de espera entre cada lectura simulada."
@@ -257,7 +301,7 @@ for i in range(1, 51):
         action_suggestion_container.empty() 
 
     with status_indicator_container:
-        if estado_lectura == "ANOMALÍA DETECTADA": # Corregido para coincidir
+        if estado_lectura == "ANOMALÍA DETECTADA":
             st.error("🔴 ESTADO ACTUAL: ANOMALÍA DETECTADA")
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
