@@ -84,9 +84,81 @@ status_indicator_container = st.empty()
 
 st.markdown("""
 <style>
+/* Fondo general y texto principal */
 .stApp {
-    background-color: #1a1a1a;
+    background-color: #222222; /* Un gris oscuro más suave */
+    color: #e0e0e0; /* Texto principal casi blanco */
 }
+/* Títulos y subtítulos */
+h1, h2, h3, h4, h5, h6 {
+    color: #f0f0f0; /* Títulos más claros */
+}
+
+/* Estilo para los KPI boxes */
+.stMetric > div {
+    background-color: #333333; /* Fondo de tarjeta más claro */
+    border-radius: 8px;
+    padding: 15px; /* Más padding */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3); /* Sombra más pronunciada */
+    color: #f0f0f0; /* Texto valor KPI */
+}
+.stMetric label {
+    color: #a0a0a0; /* Etiquetas de KPI más suaves */
+    font-size: 1.1em; /* Un poco más grande */
+}
+.stMetric div[data-testid="stMetricValue"] {
+    font-size: 2em; /* Valor KPI más grande */
+    font-weight: bold;
+    color: #00FFFF; /* Color cian vibrante para los valores */
+}
+
+/* Estilo para la tabla de historial */
+.dataframe {
+    background-color: #333333; /* Fondo de tabla más claro */
+    color: #e0e0e0; /* Texto de tabla casi blanco */
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    font-size: 0.9em; /* Fuente un poco más pequeña para la tabla */
+}
+.dataframe th {
+    background-color: #444444; /* Fondo de encabezado de tabla */
+    color: #f0f0f0;
+    padding: 8px;
+}
+.dataframe td {
+    padding: 8px;
+}
+/* Estilo para el resaltado de anomalías en la tabla */
+.stDataFrame tbody tr td:nth-child(3) div[data-value*="ANOMALÍA"] { /* Esto apunta a la columna Estado */
+    background-color: #FF6347 !important; /* Rojo tomate, más vibrante */
+    color: white !important;
+    font-weight: bold;
+}
+.stDataFrame tbody tr td div[data-value*="ANOMALÍA"] { /* Estilo para cualquier celda con ANOMALÍA */
+    background-color: #FF6347 !important; 
+    color: white !important;
+}
+
+/* Estilo para los mensajes de alerta Streamlit (st.error, st.warning, st.info, st.success) */
+div[data-testid="stAlert"] {
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+div[data-testid="stAlert"] .st-bv { /* Mensajes de info/warning/success */
+    background-color: #333333; /* Un fondo neutro para mensajes */
+    color: #f0f0f0;
+}
+div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] { /* Ajuste para el texto dentro de la alerta */
+    font-size: 1.1em;
+}
+div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
+    color: #f0f0f0; /* Color del texto dentro de la alerta */
+}
+
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -97,13 +169,26 @@ st.markdown("---")
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-kpi_container = st.container() 
-with kpi_container:
-    col1, col2 = st.columns(2) 
-    with col1:
+# Contenedor para KPIs y controles de velocidad (para que estén juntos)
+top_section_cols = st.columns([0.7, 0.3])
+
+with top_section_cols[0]: # Columna izquierda para KPIs
+    kpi_cols = st.columns(2) 
+    with kpi_cols[0]:
         st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
-    with col2:
+    with kpi_cols[1]:
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
+
+with top_section_cols[1]: # Columna derecha para el slider (sin barra lateral)
+    st.markdown("##### Control de Simulación") # Título para el slider
+    st.session_state['simulation_speed'] = st.slider( # Ahora es st.slider, no st.sidebar.slider
+        "Velocidad de Lectura (segundos por lectura)",
+        min_value=0.1, max_value=2.0, value=0.5, step=0.1,
+        help="Define el tiempo de espera entre cada lectura simulada."
+    )
+
+
+st.markdown("---") # Separador visual
 
 lectura_actual_container = st.empty()
 estado_lectura_container = st.empty()
@@ -111,6 +196,7 @@ alerta_container = st.empty()
 grafico_container = st.empty()
 historico_container = st.empty()
 action_suggestion_container = st.empty()
+
 
 historial_columnas = ['Hora', 'Lectura (°C)', 'Estado', 'Tipo de Anomalía', 'valor_numerico']
 historial_lecturas_df = pd.DataFrame(columns=historial_columnas)
@@ -171,7 +257,7 @@ for i in range(1, 51):
         action_suggestion_container.empty() 
 
     with status_indicator_container:
-        if estado_lectura == "ANOMALÍA DETECTADA":
+        if estado_lectura == "ANOMALÍA DETECTADA": # Corregido para coincidir
             st.error("🔴 ESTADO ACTUAL: ANOMALÍA DETECTADA")
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
@@ -228,7 +314,7 @@ for i in range(1, 51):
     with historico_container.container():
         st.subheader("Historial de Lecturas Recientes")
         def highlight_anomalies(s):
-            return ['background-color: #FFCCCC; color: #333333' if 'ANOMALÍA' in str(v) else '' for v in s]
+            return ['background-color: #FF6347; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
 
         st.dataframe(historial_lecturas_df.tail(15).style.apply(highlight_anomalies, axis=1))
 
