@@ -6,14 +6,11 @@ import time
 import matplotlib.pyplot as plt
 import requests
 
-# --- Función de Envío a Discord (¡Ahora lee de Streamlit Secrets!) ---
 def send_discord_alert(sensor_value, anomaly_type):
-    # *** ¡LEER EL WEBHOOK DE LOS SECRETS DE STREAMLIT CLOUD! ***
-    DISCORD_WEBHOOK_URL = st.secrets["DISCORD_WEBHOOK_URL"] 
+    DISCORD_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1392705307914014720/rw3PGOBbwj8FaEW5i6xhIDN-D5HjWSUxoxt4PyLnG2LMDE_6lElsHrG3VDitf6OAl9mp" 
 
-    # Esta es una verificación para evitar enviar si el secreto no está configurado
-    if not DISCORD_WEBHOOK_URL:
-        st.warning("🚨 ADVERTENCIA: La URL del Webhook de Discord no está configurada en los Streamlit Secrets.")
+    if DISCORD_WEBHOOK_URL == "TU_WEBHOOK_DE_DISCORD_AQUI" or not DISCORD_WEBHOOK_URL:
+        st.warning("🚨 ADVERTENCIA: La URL del Webhook de Discord no está configurada. La alerta no se enviará a Discord.")
         return
 
     message_content = {
@@ -31,8 +28,6 @@ def send_discord_alert(sensor_value, anomaly_type):
                 ],
                 "footer": {
                     "text": "Revisa el sistema de monitoreo en Streamlit Cloud"
-                    # Puedes añadir aquí la URL de tu app desplegada para que el mensaje la incluya
-                    # "url": "URL_FINAL_DE_TU_APP_EN_STREAMLIT_CLOUD" 
                 }
             }
         ]
@@ -45,8 +40,7 @@ def send_discord_alert(sensor_value, anomaly_type):
     except Exception as e:
         st.error(f"Error al enviar alerta a Discord: {e}")
 
-
-st.set_page_config(page_title="Monitor de Sensor de Temperatura", layout="wide") 
+st.set_page_config(page_title="Precisa Temp", layout="wide") 
 
 plt.rcParams['text.color'] = 'white'
 plt.rcParams['axes.labelcolor'] = 'white'
@@ -86,42 +80,6 @@ COOLDOWN_SECONDS = 60
 
 st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores")
 st.markdown("---")
-
-st.header("Análisis de Viabilidad del Emprendimiento")
-st.markdown("---")
-
-st.subheader("Contexto y Declaración del Problema")
-st.markdown("""
-Las **fallas frecuentes en sensores de temperatura industrial** generan mediciones imprecisas que afectan la calidad del producto y la seguridad operativa. Sensores inexactos causan **combustión ineficiente, más emisiones y gasto extra**. Esto provoca **paros no planificados, pérdida de calidad en productos, riesgos para la seguridad industrial y mayores costos**.
-""")
-st.markdown("---")
-
-st.subheader("Nuestra Solución: Sensores Inteligentes y Software")
-st.markdown("""
-**Precisa Temp** ofrece **sensores inteligentes y software que previenen fallas en temperatura para procesos industriales**. Nuestro sistema monitorea sensores térmicos en **tiempo real** y **detecta fallas para evitar paros y mejorar la eficiencia industrial**. Combina **autodiagnóstico en tiempo real con mantenimiento predictivo basado en machine learning**, integrándose fácilmente a sistemas existentes.
-""")
-st.markdown("---")
-
-st.subheader("Beneficios Clave de Precisa Temp")
-st.markdown("""
-* **Beneficios Funcionales:** Medición precisa y continua de la temperatura. Detección temprana de variaciones para evitar daños en equipos. Reducción de tiempos de inactividad mediante alertas preventivas.
-* **Beneficios Emocionales:** Proporciona tranquilidad y confianza al saber que los equipos están protegidos y los procesos funcionan sin riesgos ni pérdidas.
-* **Beneficios para la Sociedad:** Mejora la eficiencia energética y reduce el consumo, disminuyendo emisiones contaminantes.
-""")
-st.markdown("---")
-
-st.header("Demostración del Monitoreo en Tiempo Real")
-st.markdown("---")
-
-
-st.sidebar.header("Control de Simulación")
-st.session_state['simulation_speed'] = st.sidebar.slider(
-    "Velocidad de Lectura (segundos por lectura)",
-    min_value=0.1, max_value=2.0, value=0.5, step=0.1,
-    help="Define el tiempo de espera entre cada lectura simulada."
-)
-
-status_indicator_container = st.empty() 
 
 st.markdown("""
 <style>
