@@ -40,7 +40,8 @@ def send_discord_alert(sensor_value, anomaly_type):
     except Exception as e:
         st.error(f"Error al enviar alerta a Discord: {e}")
 
-st.set_page_config(page_title="Monitor de Sensor de Temperatura", layout="wide") 
+
+st.set_page_config(page_title="Precisa Temp", layout="wide") 
 
 plt.rcParams['text.color'] = 'white'
 plt.rcParams['axes.labelcolor'] = 'white'
@@ -118,16 +119,7 @@ st.session_state['simulation_speed'] = st.sidebar.slider(
     help="Define el tiempo de espera entre cada lectura simulada."
 )
 
-# Definición de contenedores (asegurándose de que todos estén definidos antes de usarlos en 'with')
 status_indicator_container = st.empty() 
-kpi_container = st.container() # kpi_container se usa en un with
-lectura_actual_container = st.empty()
-estado_lectura_container = st.empty()
-alerta_container = st.empty()
-grafico_container = st.empty()
-historico_container = st.empty()
-action_suggestion_container = st.empty()
-
 
 st.markdown("""
 <style>
@@ -140,13 +132,20 @@ st.markdown("""
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# Uso de kpi_container (ya definido arriba)
+kpi_container = st.container() 
 with kpi_container:
     col1, col2 = st.columns(2) 
     with col1:
         st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
     with col2:
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
+
+lectura_actual_container = st.empty()
+estado_lectura_container = st.empty()
+alerta_container = st.empty()
+grafico_container = st.empty()
+historico_container = st.empty()
+action_suggestion_container = st.empty()
 
 historial_columnas = ['Hora', 'Lectura (°C)', 'Estado', 'Tipo de Anomalía', 'valor_numerico']
 historial_lecturas_df = pd.DataFrame(columns=historial_columnas)
@@ -184,7 +183,7 @@ for i in range(1, 51):
     if prediccion == -1:
         st.session_state['total_anomalies_detected'] += 1 
 
-        estado_lectura = "ANOMALÍA DETECTADA" # Corregido para que coincida
+        estado_lectura = "ANOMALÍA DETECTADA"
         color_lectura = "red"
         mensaje_alerta = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
                           f"({tipo_anomalia}) en la lectura del sensor: **{nueva_lectura:.2f}°C**. "
@@ -206,8 +205,8 @@ for i in range(1, 51):
         alerta_container.empty()
         action_suggestion_container.empty() 
 
-    with status_indicator_container: # Uso de status_indicator_container (definido arriba)
-        if estado_lectura == "ANOMALÍA DETECTADA": # Corregido para coincidir
+    with status_indicator_container:
+        if estado_lectura == "ANOMALÍA DETECTADA":
             st.error("🔴 ESTADO ACTUAL: ANOMALÍA DETECTADA")
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
@@ -236,7 +235,7 @@ for i in range(1, 51):
         
         ax.plot(df_para_grafico['Hora'], df_para_grafico['valor_numerico'], label='Temperatura', color='skyblue', linewidth=2)
         
-        anomalias_grafico = df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA'] # Corregido para coincidir
+        anomalias_grafico = df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']
         if not anomalias_grafico.empty:
             ax.scatter(anomalias_grafico['Hora'], anomalias_grafico['valor_numerico'], color='red', s=100, marker='X', linewidths=1, edgecolors='white', label='Anomalía')
 
