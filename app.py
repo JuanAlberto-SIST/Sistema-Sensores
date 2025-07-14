@@ -173,16 +173,16 @@ st.markdown("---")
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-control_cols = st.columns(3) 
+# KPIs se muestran una sola vez al inicio, se actualizan automáticamente por session_state
+kpi_cols = st.columns(2) 
+with kpi_cols[0]:
+    st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
+with kpi_cols[1]:
+    st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
+
+control_cols = st.columns(2) # Reducido a 2 columnas para el resto de controles
 
 with control_cols[0]:
-    kpi_cols = st.columns(2) 
-    with kpi_cols[0]:
-        st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
-    with kpi_cols[1]:
-        st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
-
-with control_cols[1]:
     st.markdown("##### Control de Simulación") 
     st.session_state['simulation_speed'] = st.slider(
         "Velocidad de Lectura (segundos por lectura)",
@@ -190,7 +190,7 @@ with control_cols[1]:
         help="Define el tiempo de espera entre cada lectura simulada."
     )
 
-with control_cols[2]:
+with control_cols[1]:
     st.markdown("##### Control de Modelo IA")
     new_contamination_value = st.slider(
         "Sensibilidad Detección (Contamination)",
@@ -212,10 +212,10 @@ st.markdown("---")
 # Contenedores para mensajes de alerta y sugerencias de acción
 alerta_container = st.empty()
 action_suggestion_container = st.empty()
-# Contenedores para el gráfico y el historial (reintroducidos)
+# Contenedores para el gráfico y el historial
 grafico_container = st.empty()
 historico_container = st.empty()
-
+status_indicator_container = st.empty() # Indicador de estado global
 
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
@@ -267,10 +267,10 @@ for i in range(1, 101):
                 send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia, sugerencia_accion) 
                 st.session_state['last_alert_time'][sensor_id] = current_time 
                 st.session_state['total_alerts_sent'] += 1 
-                st.info(f"✅ Alerta de Discord enviada para {sensor_id} (próxima alerta en {COOLDOWN_SECONDS}s).")
-            else:
-                tiempo_restante = int(COOLDOWN_SECONDS - (current_time - st.session_state['last_alert_time'][sensor_id]))
-                st.warning(f"⚠️ Anomalía detectada en {sensor_id}, pero alerta omitida (cooldown activo). Próxima alerta en {tiempo_restante} segundos.")
+                # Se eliminan los st.info/st.warning repetitivos aquí
+            # else:
+            #     tiempo_restante = int(COOLDOWN_SECONDS - (current_time - st.session_state['last_alert_time'][sensor_id]))
+            #     st.warning(f"⚠️ Anomalía detectada en {sensor_id}, pero alerta omitida (cooldown activo). Próxima alerta en {tiempo_restante} segundos.")
         
         nueva_fila_historial = pd.DataFrame([{
             'Hora': time.strftime('%H:%M:%S'),
@@ -282,14 +282,14 @@ for i in range(1, 101):
         }])
         st.session_state['historial_lecturas_df'] = pd.concat([st.session_state['historial_lecturas_df'], nueva_fila_historial], ignore_index=True)
 
-    with control_cols[0]:
-        kpi_cols = st.columns(2) 
-        with kpi_cols[0]:
-            st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
-        with kpi_cols[1]:
-            st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
+    # Actualizar el indicador de estado global
+    with status_indicator_container:
+        if anomalies_in_this_iteration:
+            st.error("🔴 ESTADO ACTUAL: ANOMALÍA(S) DETECTADA(S)")
+        else:
+            st.success("🟢 ESTADO ACTUAL: Normal")
 
-    # --- Gráfico de Tendencia de Temperatura (reintroducido) ---
+    # --- Gráfico de Tendencia de Temperatura ---
     with grafico_container.container():
         st.subheader("Gráfico de Tendencia de Temperatura")
         num_lecturas_grafico = 50 * len(SENSOR_IDS) 
@@ -332,7 +332,7 @@ for i in range(1, 101):
         
         st.altair_chart(chart, use_container_width=True)
 
-    # --- Historial de Lecturas Recientes (reintroducido) ---
+    # --- Historial de Lecturas Recientes ---
     with historico_container.container():
         st.subheader("Historial de Lecturas Recientes")
         def highlight_anomalies(s):
