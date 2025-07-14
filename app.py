@@ -173,14 +173,17 @@ st.markdown("---")
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# KPIs se muestran una sola vez al inicio, se actualizan automáticamente por session_state
-kpi_cols = st.columns(2) 
-with kpi_cols[0]:
+# Contenedores vacíos para los KPIs que se actualizarán dinámicamente
+kpi_container_anomalies = st.empty()
+kpi_container_alerts = st.empty()
+
+# Inicializa los KPIs fuera del bucle
+with kpi_container_anomalies.container():
     st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
-with kpi_cols[1]:
+with kpi_container_alerts.container():
     st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-control_cols = st.columns(2) # Reducido a 2 columnas para el resto de controles
+control_cols = st.columns(2) 
 
 with control_cols[0]:
     st.markdown("##### Control de Simulación") 
@@ -209,13 +212,11 @@ with control_cols[1]:
 
 st.markdown("---")
 
-# Contenedores para mensajes de alerta y sugerencias de acción
 alerta_container = st.empty()
 action_suggestion_container = st.empty()
-# Contenedores para el gráfico y el historial
 grafico_container = st.empty()
 historico_container = st.empty()
-status_indicator_container = st.empty() # Indicador de estado global
+status_indicator_container = st.empty() 
 
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
@@ -267,10 +268,6 @@ for i in range(1, 101):
                 send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia, sugerencia_accion) 
                 st.session_state['last_alert_time'][sensor_id] = current_time 
                 st.session_state['total_alerts_sent'] += 1 
-                # Se eliminan los st.info/st.warning repetitivos aquí
-            # else:
-            #     tiempo_restante = int(COOLDOWN_SECONDS - (current_time - st.session_state['last_alert_time'][sensor_id]))
-            #     st.warning(f"⚠️ Anomalía detectada en {sensor_id}, pero alerta omitida (cooldown activo). Próxima alerta en {tiempo_restante} segundos.")
         
         nueva_fila_historial = pd.DataFrame([{
             'Hora': time.strftime('%H:%M:%S'),
@@ -281,6 +278,12 @@ for i in range(1, 101):
             'valor_numerico': nueva_lectura
         }])
         st.session_state['historial_lecturas_df'] = pd.concat([st.session_state['historial_lecturas_df'], nueva_fila_historial], ignore_index=True)
+
+    # Actualizar los KPIs dentro del bucle usando los contenedores vacíos
+    with kpi_container_anomalies.container():
+        st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
+    with kpi_container_alerts.container():
+        st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
     # Actualizar el indicador de estado global
     with status_indicator_container:
