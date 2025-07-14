@@ -209,8 +209,13 @@ with control_cols[2]:
 
 st.markdown("---")
 
+# Contenedores para mensajes de alerta y sugerencias de acción
 alerta_container = st.empty()
 action_suggestion_container = st.empty()
+# Contenedores para el gráfico y el historial (reintroducidos)
+grafico_container = st.empty()
+historico_container = st.empty()
+
 
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
@@ -283,6 +288,57 @@ for i in range(1, 101):
             st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
         with kpi_cols[1]:
             st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
+
+    # --- Gráfico de Tendencia de Temperatura (reintroducido) ---
+    with grafico_container.container():
+        st.subheader("Gráfico de Tendencia de Temperatura")
+        num_lecturas_grafico = 50 * len(SENSOR_IDS) 
+        df_para_grafico = st.session_state['historial_lecturas_df'].tail(num_lecturas_grafico).copy()
+        
+        df_para_grafico['Hora_dt'] = pd.to_datetime(df_para_grafico['Hora'], format='%H:%M:%S')
+        df_para_grafico = df_para_grafico.sort_values(by='Hora_dt').reset_index(drop=True)
+
+        line_chart = alt.Chart(df_para_grafico).mark_line().encode( 
+            x=alt.X('Hora_dt', title='Tiempo', axis=alt.Axis(format='%H:%M:%S')), 
+            y=alt.Y('valor_numerico', title='Temperatura (°C)'),
+            color=alt.Color('Sensor ID', title='Sensor'),
+            tooltip=[
+                alt.Tooltip('Hora', title='Hora'), 
+                alt.Tooltip('Sensor ID', title='Sensor'),
+                alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
+                alt.Tooltip('Estado', title='Estado')
+            ]
+        ).properties(
+            title=f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor'
+        ).interactive()
+
+        anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
+            color='#FF0000', filled=True, size=100, shape='cross'
+        ).encode(
+            x=alt.X('Hora_dt'), 
+            y=alt.Y('valor_numerico'),
+            tooltip=[
+                alt.Tooltip('Hora', title='Hora'), 
+                alt.Tooltip('Sensor ID', title='Sensor'),
+                alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
+                alt.Tooltip('Estado', title='Estado'),
+                alt.Tooltip('Tipo de Anomalía', title='Tipo Anomalía')
+            ]
+        )
+
+        chart = alt.layer(line_chart, anomaly_points).resolve_scale(
+            y='independent'
+        )
+        
+        st.altair_chart(chart, use_container_width=True)
+
+    # --- Historial de Lecturas Recientes (reintroducido) ---
+    with historico_container.container():
+        st.subheader("Historial de Lecturas Recientes")
+        def highlight_anomalies(s):
+            return ['background-color: #FF6347; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
+
+        st.dataframe(st.session_state['historial_lecturas_df'].tail(15 * len(SENSOR_IDS)).style.apply(highlight_anomalies, axis=1))
 
     time.sleep(st.session_state['simulation_speed']) 
 
