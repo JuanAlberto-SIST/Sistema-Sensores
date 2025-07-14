@@ -209,11 +209,7 @@ with control_cols[2]:
 
 st.markdown("---")
 
-sensor_metric_containers = st.columns(len(SENSOR_IDS))
-status_indicator_container = st.empty() 
 alerta_container = st.empty()
-grafico_container = st.empty()
-historico_container = st.empty()
 action_suggestion_container = st.empty()
 
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
@@ -271,11 +267,6 @@ for i in range(1, 101):
                 tiempo_restante = int(COOLDOWN_SECONDS - (current_time - st.session_state['last_alert_time'][sensor_id]))
                 st.warning(f"⚠️ Anomalía detectada en {sensor_id}, pero alerta omitida (cooldown activo). Próxima alerta en {tiempo_restante} segundos.")
         
-        with sensor_metric_containers[idx]:
-            st.metric(label=f"Lectura {sensor_id}", value=f"{nueva_lectura:.2f}°C", delta=None)
-            color_lectura = "red" if estado_lectura == "ANOMALÍA DETECTADA" else "green"
-            st.markdown(f"<p style='color:{color_lectura}; font-size: 16px;'>Estado: {estado_lectura}</p>", unsafe_allow_html=True)
-
         nueva_fila_historial = pd.DataFrame([{
             'Hora': time.strftime('%H:%M:%S'),
             'Sensor ID': sensor_id,
@@ -286,60 +277,12 @@ for i in range(1, 101):
         }])
         st.session_state['historial_lecturas_df'] = pd.concat([st.session_state['historial_lecturas_df'], nueva_fila_historial], ignore_index=True)
 
-    with status_indicator_container:
-        if anomalies_in_this_iteration:
-            st.error("🔴 ESTADO ACTUAL: ANOMALÍA(S) DETECTADA(S)")
-        else:
-            st.success("🟢 ESTADO ACTUAL: Normal")
-
-    with grafico_container.container():
-        st.subheader("Gráfico de Tendencia de Temperatura")
-        num_lecturas_grafico = 50 * len(SENSOR_IDS)
-        df_para_grafico = st.session_state['historial_lecturas_df'].tail(num_lecturas_grafico).copy()
-        
-        df_para_grafico['Hora_dt'] = pd.to_datetime(df_para_grafico['Hora'], format='%H:%M:%S')
-        df_para_grafico = df_para_grafico.sort_values(by='Hora_dt').reset_index(drop=True)
-
-        line_chart = alt.Chart(df_para_grafico).mark_line().encode( 
-            x=alt.X('Hora_dt', title='Tiempo', axis=alt.Axis(format='%H:%M:%S')), 
-            y=alt.Y('valor_numerico', title='Temperatura (°C)'),
-            color=alt.Color('Sensor ID', title='Sensor'),
-            tooltip=[
-                alt.Tooltip('Hora', title='Hora'), 
-                alt.Tooltip('Sensor ID', title='Sensor'),
-                alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
-                alt.Tooltip('Estado', title='Estado')
-            ]
-        ).properties(
-            title=f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor'
-        ).interactive()
-
-        anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
-            color='#FF0000', filled=True, size=100, shape='cross'
-        ).encode(
-            x=alt.X('Hora_dt'), 
-            y=alt.Y('valor_numerico'),
-            tooltip=[
-                alt.Tooltip('Hora', title='Hora'), 
-                alt.Tooltip('Sensor ID', title='Sensor'),
-                alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
-                alt.Tooltip('Estado', title='Estado'),
-                alt.Tooltip('Tipo de Anomalía', title='Tipo Anomalía')
-            ]
-        )
-
-        chart = alt.layer(line_chart, anomaly_points).resolve_scale(
-            y='independent'
-        )
-        
-        st.altair_chart(chart, use_container_width=True)
-
-    with historico_container.container():
-        st.subheader("Historial de Lecturas Recientes")
-        def highlight_anomalies(s):
-            return ['background-color: #FF6347; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
-
-        st.dataframe(st.session_state['historial_lecturas_df'].tail(15 * len(SENSOR_IDS)).style.apply(highlight_anomalies, axis=1))
+    with control_cols[0]:
+        kpi_cols = st.columns(2) 
+        with kpi_cols[0]:
+            st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
+        with kpi_cols[1]:
+            st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
     time.sleep(st.session_state['simulation_speed']) 
 
