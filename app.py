@@ -7,8 +7,10 @@ import matplotlib.pyplot as plt
 import requests
 import altair as alt
 
-def send_discord_alert(sensor_value, anomaly_type, action_suggestion_text):
-    DISCORD_WEBHOOK_URL = st.secrets["DISCORD_WEBHOOK_URL"] 
+SENSOR_IDS = ["Sensor_001", "Sensor_002", "Sensor_003", "Sensor_004"] 
+
+def send_discord_alert(sensor_id, sensor_value, anomaly_type, action_suggestion_text):
+    DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL") 
 
     if not DISCORD_WEBHOOK_URL:
         st.warning("🚨 ADVERTENCIA: La URL del Webhook de Discord no está configurada en los Streamlit Secrets.")
@@ -19,11 +21,12 @@ def send_discord_alert(sensor_value, anomaly_type, action_suggestion_text):
         "avatar_url": "https://i.imgur.com/4S0t20e.png", 
         "embeds": [
             {
-                "title": "🚨 ALERTA: Anomalía Detectada en Sensor de Temperatura",
-                "description": f"Se ha detectado una **ANOMALÍA** en el sensor de temperatura.\n\n"
+                "title": f"🚨 ALERTA: Anomalía Detectada en {sensor_id}",
+                "description": f"Se ha detectado una **ANOMALÍA** en el sensor **{sensor_id}**.\n\n"
                                f"**Sugerencia de Acción:** {action_suggestion_text}",
                 "color": 15548997, 
                 "fields": [
+                    {"name": "Sensor ID", "value": sensor_id, "inline": True},
                     {"name": "Tipo de Anomalía", "value": anomaly_type, "inline": True},
                     {"name": "Valor del Sensor", "value": f"{sensor_value:.2f}°C", "inline": True},
                     {"name": "Hora de Detección", "value": time.strftime('%Y-%m-%d %H:%M:%S'), "inline": False}
@@ -38,11 +41,11 @@ def send_discord_alert(sensor_value, anomaly_type, action_suggestion_text):
     try:
         response = requests.post(DISCORD_WEBHOOK_URL, json=message_content)
         response.raise_for_status() 
-        st.success(f"Alerta de Discord enviada correctamente (Código: {response.status_code})")
+        st.success(f"Alerta de Discord enviada correctamente para {sensor_id} (Código: {response.status_code})")
     except Exception as e:
-        st.error(f"Error al enviar alerta a Discord: {e}")
+        st.error(f"Error al enviar alerta a Discord para {sensor_id}: {e}")
 
-st.set_page_config(page_title="Precisa Temp", layout="wide") 
+st.set_page_config(page_title="Precisa Temp Multi-Sensor", layout="wide") 
 
 plt.rcParams['text.color'] = 'white'
 plt.rcParams['axes.labelcolor'] = 'white'
@@ -66,79 +69,76 @@ temperatura_con_fallos_entrenamiento[350:355] = np.random.uniform(40, 50, 5)
 
 data_for_model_training = temperatura_con_fallos_entrenamiento.reshape(-1, 1)
 
-# NEW: Inicialización de Session State para 'contamination_value' (se mantiene)
 if 'contamination_value' not in st.session_state:
     st.session_state['contamination_value'] = 0.03 
 
-# El modelo se inicializa con el valor del slider (que ahora está en la página principal)
-model = IsolationForest(contamination=st.session_state['contamination_value'], random_state=42)
-model.fit(data_for_model_training)
-
+if 'sensor_models' not in st.session_state:
+    st.session_state['sensor_models'] = {}
+    for sensor_id in SENSOR_IDS:
+        model = IsolationForest(contamination=st.session_state['contamination_value'], random_state=42)
+        model.fit(data_for_model_training)
+        st.session_state['sensor_models'][sensor_id] = model
 
 if 'total_anomalies_detected' not in st.session_state:
     st.session_state['total_anomalies_detected'] = 0
 if 'total_alerts_sent' not in st.session_state:
     st.session_state['total_alerts_sent'] = 0
-# NEW: simulation_speed ya no es un slider, pero se define para evitar NameError
+
 if 'simulation_speed' not in st.session_state:
     st.session_state['simulation_speed'] = 0.5 
 
 if 'last_alert_time' not in st.session_state:
-    st.session_state['last_alert_time'] = 0 
+    st.session_state['last_alert_time'] = {sensor_id: 0 for sensor_id in SENSOR_IDS} 
 COOLDOWN_SECONDS = 60 
 
-status_indicator_container = st.empty() 
+historial_columnas = ['Hora', 'Sensor ID', 'Lectura (°C)', 'Estado', 'Tipo de Anomalía', 'valor_numerico']
+if 'historial_lecturas_df' not in st.session_state:
+    st.session_state['historial_lecturas_df'] = pd.DataFrame(columns=historial_columnas)
+    st.session_state['historial_lecturas_df']['valor_numerico'] = st.session_state['historial_lecturas_df']['valor_numerico'].astype(float)
 
 st.markdown("""
 <style>
-/* Fondo general y texto principal */
 .stApp {
-    background-color: #1a1a1a; /* Un gris muy oscuro profesional */
-    color: #e0e0e0; /* Texto principal casi blanco */
+    background-color: #1a1a1a;
+    color: #e0e0e0;
 }
-/* Títulos y subtítulos */
 h1, h2, h3, h4, h5, h6 {
-    color: #f0f0f0; /* Títulos más claros */
+    color: #f0f0f0;
 }
-
-/* Estilo para los KPI boxes */
 .stMetric > div {
-    background-color: #333333; /* Fondo de tarjeta más claro */
+    background-color: #333333;
     border-radius: 8px;
-    padding: 15px; /* Más padding */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3); /* Sombra más pronunciada */
-    color: #f0f0f0; /* Texto valor KPI */
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    color: #f0f0f0;
 }
 .stMetric label {
-    color: #a0a0a0; /* Etiquetas de KPI más suaves */
-    font-size: 1.1em; /* Un poco más grande */
+    color: #a0a0a0;
+    font-size: 1.1em;
 }
 .stMetric div[data-testid="stMetricValue"] {
-    font-size: 2em; /* Valor KPI más grande */
+    font-size: 2em;
     font-weight: bold;
-    color: #00FFFF; /* Color cian vibrante para los valores */
+    color: #00FFFF;
 }
-
-/* Estilo para la tabla de historial */
 .dataframe {
-    background-color: #333333; /* Fondo de tabla más claro */
-    color: #e0e0e0; /* Texto de tabla casi blanco */
+    background-color: #333333;
+    color: #e0e0e0;
     border-radius: 8px;
     padding: 10px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    font-size: 0.9em; /* Fuente un poco más pequeña para la tabla */
+    font-size: 0.9em;
 }
 .dataframe th {
-    background-color: #444444; /* Fondo de encabezado de tabla */
+    background-color: #444444;
     color: #f0f0f0;
     padding: 8px;
 }
 .dataframe td {
     padding: 8px;
 }
-/* Estilo para el resaltado de anomalías en la tabla */
-.stDataFrame tbody tr td:nth-child(3) div[data-value*="ANOMALÍA"] { 
-    background-color: #FF6347 !important; /* Rojo tomate, más vibrante */
+.stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] {
+    background-color: #FF6347 !important;
     color: white !important;
     font-weight: bold;
 }
@@ -146,8 +146,6 @@ h1, h2, h3, h4, h5, h6 {
     background-color: #FF6347 !important; 
     color: white !important;
 }
-
-/* Estilo para los mensajes de alerta Streamlit (st.error, st.warning, st.info, st.success) */
 div[data-testid="stAlert"] {
     border-radius: 8px;
     padding: 15px;
@@ -164,176 +162,175 @@ div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] {
 div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
     color: #f0f0f0; 
 }
-
-/* Ocultar la barra lateral por completo */
 [data-testid="stSidebar"] {
     display: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# --- AQUI SE HAN ELIMINADO LAS SECCIONES DE INTRODUCCIÓN ---
-# st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores") (este título se movió arriba)
-# st.markdown("---") (este markdown se movió arriba)
-# st.header("Análisis de Viabilidad del Emprendimiento")
-# ... y todo el contenido de los expanders ...
-# st.header("Demostración del Monitoreo en Tiempo Real") (este header se movió más abajo)
-
-
-st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores") # Título principal de la página
-st.markdown("---") # Separador debajo del título
-
+st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores (Multi-Sensor)") 
+st.markdown("---") 
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# --- CONTROLES DE SIMULACIÓN Y MODELO EN COLUMNAS DE PÁGINA PRINCIPAL ---
-control_cols = st.columns(3) # Tres columnas para KPIs, Velocidad y Contamination
+control_cols = st.columns(3) 
 
-with control_cols[0]: # Columna para KPIs
+with control_cols[0]:
     kpi_cols = st.columns(2) 
     with kpi_cols[0]:
         st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
     with kpi_cols[1]:
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-with control_cols[1]: # Columna para el slider de Velocidad
-    st.markdown("##### Control de Simulación") # Título para el slider
+with control_cols[1]:
+    st.markdown("##### Control de Simulación") 
     st.session_state['simulation_speed'] = st.slider(
         "Velocidad de Lectura (segundos por lectura)",
         min_value=0.1, max_value=2.0, value=0.5, step=0.1,
         help="Define el tiempo de espera entre cada lectura simulada."
     )
 
-with control_cols[2]: # Columna para el slider de Sensibilidad de IA
+with control_cols[2]:
     st.markdown("##### Control de Modelo IA")
-    st.session_state['contamination_value'] = st.slider(
+    new_contamination_value = st.slider(
         "Sensibilidad Detección (Contamination)",
         min_value=0.01, max_value=0.10, value=st.session_state['contamination_value'], step=0.005,
         format="%.3f",
         help="Proporción esperada de anomalías. Mayor valor = más sensible."
     )
+    if new_contamination_value != st.session_state['contamination_value']:
+        st.session_state['contamination_value'] = new_contamination_value
+        st.session_state['sensor_models'] = {}
+        for sensor_id in SENSOR_IDS:
+            model = IsolationForest(contamination=st.session_state['contamination_value'], random_state=42)
+            model.fit(data_for_model_training)
+            st.session_state['sensor_models'][sensor_id] = model
+        st.info("Modelos de IA re-entrenados con nueva sensibilidad.")
 
+st.markdown("---")
 
-st.markdown("---") # Separador visual
-
-lectura_actual_container = st.empty()
-estado_lectura_container = st.empty()
+sensor_metric_containers = st.columns(len(SENSOR_IDS))
+status_indicator_container = st.empty() 
 alerta_container = st.empty()
 grafico_container = st.empty()
 historico_container = st.empty()
 action_suggestion_container = st.empty()
 
+st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
-historial_columnas = ['Hora', 'Lectura (°C)', 'Estado', 'Tipo de Anomalía', 'valor_numerico']
-historial_lecturas_df = pd.DataFrame(columns=historial_columnas)
-historial_lecturas_df['valor_numerico'] = historial_lecturas_df['valor_numerico'].astype(float)
+for i in range(1, 101):
+    alerta_container.empty()
+    action_suggestion_container.empty()
 
-st.write("Iniciando simulación de lecturas del sensor de temperatura...")
+    anomalies_in_this_iteration = False
 
-for i in range(1, 51): 
-    nueva_lectura = 0.0
-    tipo_anomalia = "N/A"
-    sugerencia_accion = "" 
+    for idx, sensor_id in enumerate(SENSOR_IDS):
+        nueva_lectura = 0.0
+        tipo_anomalia = "N/A"
+        sugerencia_accion = ""
 
-    if i % 10 != 0 and i % 15 != 0 and i % 25 != 0:
-        nueva_lectura = 25 + 2 * np.random.randn(1)[0]
-        nueva_lectura = np.clip(nueva_lectura, 20, 30)
-    elif i % 10 == 0:
-        nueva_lectura = np.random.uniform(45, 55, 1)[0]
-        tipo_anomalia = "Pico Alto"
-        sugerencia_accion = "Revisar posibles sobrecargas, fallos en ventilación o componentes sobrecalentados." 
-    elif i % 15 == 0:
-        nueva_lectura = np.random.uniform(5, 10, 1)[0]
-        tipo_anomalia = "Caída Baja"
-        sugerencia_accion = "Verificar si el sensor está desconectado, dañado o hay un problema en la fuente de energía." 
-    elif i % 25 == 0:
-        nueva_lectura = 23.0
-        tipo_anomalia = "Valor Constante"
-        sugerencia_accion = "Inspeccionar el sensor por posibles fallas de congelación, cortocircuito o falta de comunicación." 
+        if (i + idx) % 10 != 0 and (i + idx) % 15 != 0 and (i + idx) % 25 != 0:
+            nueva_lectura = 25 + 2 * np.random.randn(1)[0]
+            nueva_lectura = np.clip(nueva_lectura, 20, 30)
+        elif (i + idx) % 10 == 0:
+            nueva_lectura = np.random.uniform(45, 55, 1)[0]
+            tipo_anomalia = "Pico Alto"
+            sugerencia_accion = "Revisar posibles sobrecargas, fallos en ventilación o componentes sobrecalentados." 
+        elif (i + idx) % 15 == 0:
+            nueva_lectura = np.random.uniform(5, 10, 1)[0]
+            tipo_anomalia = "Caída Baja"
+            sugerencia_accion = "Verificar si el sensor está desconectado, dañado o hay un problema en la fuente de energía." 
+        elif (i + idx) % 25 == 0:
+            nueva_lectura = 23.0 + np.random.uniform(-1, 1, 1)[0]
+            tipo_anomalia = "Valor Constante"
+            sugerencia_accion = "Inspeccionar el sensor por posibles fallas de congelación, cortocircuito o falta de comunicación." 
 
-    prediccion = model.predict(np.array(nueva_lectura).reshape(-1, 1))
+        model = st.session_state['sensor_models'][sensor_id]
+        prediccion = model.predict(np.array(nueva_lectura).reshape(-1, 1))
 
-    estado_lectura = "Normal"
-    color_lectura = "green"
-    mensaje_alerta = ""
-
-    if prediccion == -1:
-        st.session_state['total_anomalies_detected'] += 1 
-
-        estado_lectura = "ANOMALÍA DETECTADA"
-        color_lectura = "red"
-        mensaje_alerta = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
-                          f"({tipo_anomalia}) en la lectura del sensor: **{nueva_lectura:.2f}°C**. "
-                          f"¡Se recomienda revisar el sistema!")
-        alerta_container.error(mensaje_alerta)
+        estado_lectura = "Normal"
         
-        action_suggestion_container.info(f"💡 **Sugerencia de Acción:** {sugerencia_accion}")
+        if prediccion == -1:
+            st.session_state['total_anomalies_detected'] += 1 
+            estado_lectura = "ANOMALÍA DETECTADA"
+            anomalies_in_this_iteration = True
 
-        current_time = time.time()
-        if (current_time - st.session_state['last_alert_time']) > COOLDOWN_SECONDS:
-            send_discord_alert(nueva_lectura, tipo_anomalia, sugerencia_accion) 
-            st.session_state['last_alert_time'] = current_time 
-            st.session_state['total_alerts_sent'] += 1 
-            st.info(f"✅ Alerta de Discord enviada (próxima alerta en {COOLDOWN_SECONDS}s).")
-        else:
-            tiempo_restante = int(COOLDOWN_SECONDS - (current_time - st.session_state['last_alert_time']))
-            st.warning(f"⚠️ Anomalía detectada, pero alerta omitida (cooldown activo). Próxima alerta en {tiempo_restante} segundos.")
-    else:
-        alerta_container.empty()
-        action_suggestion_container.empty() 
+            mensaje_alerta = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
+                              f"({tipo_anomalia}) en el sensor **{sensor_id}**: **{nueva_lectura:.2f}°C**. "
+                              f"¡Se recomienda revisar el sistema!")
+            alerta_container.error(mensaje_alerta)
+            action_suggestion_container.info(f"💡 **Sugerencia de Acción para {sensor_id}:** {sugerencia_accion}")
+
+            current_time = time.time()
+            if (current_time - st.session_state['last_alert_time'][sensor_id]) > COOLDOWN_SECONDS:
+                send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia, sugerencia_accion) 
+                st.session_state['last_alert_time'][sensor_id] = current_time 
+                st.session_state['total_alerts_sent'] += 1 
+                st.info(f"✅ Alerta de Discord enviada para {sensor_id} (próxima alerta en {COOLDOWN_SECONDS}s).")
+            else:
+                tiempo_restante = int(COOLDOWN_SECONDS - (current_time - st.session_state['last_alert_time'][sensor_id]))
+                st.warning(f"⚠️ Anomalía detectada en {sensor_id}, pero alerta omitida (cooldown activo). Próxima alerta en {tiempo_restante} segundos.")
+        
+        with sensor_metric_containers[idx]:
+            st.metric(label=f"Lectura {sensor_id}", value=f"{nueva_lectura:.2f}°C", delta=None)
+            color_lectura = "red" if estado_lectura == "ANOMALÍA DETECTADA" else "green"
+            st.markdown(f"<p style='color:{color_lectura}; font-size: 16px;'>Estado: {estado_lectura}</p>", unsafe_allow_html=True)
+
+        nueva_fila_historial = pd.DataFrame([{
+            'Hora': time.strftime('%H:%M:%S'),
+            'Sensor ID': sensor_id,
+            'Lectura (°C)': f"{nueva_lectura:.2f}",
+            'Estado': estado_lectura,
+            'Tipo de Anomalía': tipo_anomalia,
+            'valor_numerico': nueva_lectura
+        }])
+        st.session_state['historial_lecturas_df'] = pd.concat([st.session_state['historial_lecturas_df'], nueva_fila_historial], ignore_index=True)
 
     with status_indicator_container:
-        if estado_lectura == "ANOMALÍA DETECTADA":
-            st.error("🔴 ESTADO ACTUAL: ANOMALÍA DETECTADA")
+        if anomalies_in_this_iteration:
+            st.error("🔴 ESTADO ACTUAL: ANOMALÍA(S) DETECTADA(S)")
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
 
-    nueva_fila_historial = pd.DataFrame([{
-        'Hora': time.strftime('%H:%M:%S'),
-        'Lectura (°C)': f"{nueva_lectura:.2f}",
-        'Estado': estado_lectura,
-        'Tipo de Anomalía': tipo_anomalia,
-        'valor_numerico': nueva_lectura
-    }])
-    historial_lecturas_df = pd.concat([historial_lecturas_df, nueva_fila_historial], ignore_index=True)
-
-    with lectura_actual_container.container():
-        st.metric(label="Última Lectura de Temperatura", value=f"{nueva_lectura:.2f}°C", delta=None)
-
-    with estado_lectura_container.container():
-        st.markdown(f"<p style='color:{color_lectura}; font-size: 20px; font-weight: bold;'>Estado: {estado_lectura}</p>", unsafe_allow_html=True)
-
     with grafico_container.container():
         st.subheader("Gráfico de Tendencia de Temperatura")
-        num_lecturas_grafico = 50 
-        df_para_grafico = historial_lecturas_df.tail(num_lecturas_grafico).reset_index()
+        num_lecturas_grafico = 50 * len(SENSOR_IDS)
+        df_para_grafico = st.session_state['historial_lecturas_df'].tail(num_lecturas_grafico).copy()
+        
+        df_para_grafico['Hora_dt'] = pd.to_datetime(df_para_grafico['Hora'], format='%H:%M:%S')
+        df_para_grafico = df_para_grafico.sort_values(by='Hora_dt').reset_index(drop=True)
 
-        line_chart = alt.Chart(df_para_grafico).mark_line(color='#00FFFF').encode( 
-            x=alt.X('Hora', axis=None), 
+        line_chart = alt.Chart(df_para_grafico).mark_line().encode( 
+            x=alt.X('Hora_dt', title='Tiempo', axis=alt.Axis(format='%H:%M:%S')), 
             y=alt.Y('valor_numerico', title='Temperatura (°C)'),
+            color=alt.Color('Sensor ID', title='Sensor'),
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
+                alt.Tooltip('Sensor ID', title='Sensor'),
                 alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
                 alt.Tooltip('Estado', title='Estado')
             ]
         ).properties(
-            title=f'Últimas {num_lecturas_grafico} Lecturas de Temperatura'
-        )
+            title=f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor'
+        ).interactive()
 
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
             color='#FF0000', filled=True, size=100, shape='cross'
         ).encode(
-            x=alt.X('Hora'), 
+            x=alt.X('Hora_dt'), 
             y=alt.Y('valor_numerico'),
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
+                alt.Tooltip('Sensor ID', title='Sensor'),
                 alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
                 alt.Tooltip('Estado', title='Estado'),
                 alt.Tooltip('Tipo de Anomalía', title='Tipo Anomalía')
             ]
         )
 
-        chart = alt.layer(line_chart, anomaly_points).interactive() 
+        chart = alt.layer(line_chart, anomaly_points).resolve_scale(
+            y='independent'
+        )
         
         st.altair_chart(chart, use_container_width=True)
 
@@ -342,9 +339,8 @@ for i in range(1, 51):
         def highlight_anomalies(s):
             return ['background-color: #FF6347; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
 
-        st.dataframe(historial_lecturas_df.tail(15).style.apply(highlight_anomalies, axis=1))
-
+        st.dataframe(st.session_state['historial_lecturas_df'].tail(15 * len(SENSOR_IDS)).style.apply(highlight_anomalies, axis=1))
 
     time.sleep(st.session_state['simulation_speed']) 
 
-st.success("✅ Simulación de monitoreo de sensor de temperatura finalizada.")
+st.success("✅ Simulación de monitoreo de sensores de temperatura finalizada.")
