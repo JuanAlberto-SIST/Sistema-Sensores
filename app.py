@@ -79,6 +79,11 @@ if 'sensor_models' not in st.session_state:
         model.fit(data_for_model_training)
         st.session_state['sensor_models'][sensor_id] = model
 
+# Nuevo estado para controlar si un sensor está en falla persistente
+if 'sensor_failure_state' not in st.session_state:
+    st.session_state['sensor_failure_state'] = {sensor_id: {'is_failed': False, 'original_type': 'N/A', 'original_suggestion': ''} for sensor_id in SENSOR_IDS}
+
+
 if 'total_anomalies_detected' not in st.session_state:
     st.session_state['total_anomalies_detected'] = 0
 if 'total_alerts_sent' not in st.session_state:
@@ -173,11 +178,9 @@ st.markdown("---")
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-# Contenedores vacíos para los KPIs que se actualizarán dinámicamente
 kpi_container_anomalies = st.empty()
 kpi_container_alerts = st.empty()
 
-# Inicializa los KPIs fuera del bucle
 with kpi_container_anomalies.container():
     st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
 with kpi_container_alerts.container():
@@ -228,71 +231,99 @@ for i in range(1, 101):
 
     for idx, sensor_id in enumerate(SENSOR_IDS):
         nueva_lectura = 0.0
-        tipo_anomalia = "N/A"
-        sugerencia_accion = ""
+        tipo_anomalia_display = "N/A"
+        sugerencia_accion_display = ""
 
-        if (i + idx) % 10 != 0 and (i + idx) % 15 != 0 and (i + idx) % 25 != 0:
-            nueva_lectura = 25 + 2 * np.random.randn(1)[0]
-            nueva_lectura = np.clip(nueva_lectura, 20, 30)
-        elif (i + idx) % 10 == 0:
-            nueva_lectura = np.random.uniform(45, 55, 1)[0]
-            tipo_anomalia = "Pico Alto"
-            sugerencia_accion = "Revisar posibles sobrecargas, fallos en ventilación o componentes sobrecalentados." 
-        elif (i + idx) % 15 == 0:
-            nueva_lectura = np.random.uniform(5, 10, 1)[0]
-            tipo_anomalia = "Caída Baja"
-            sugerencia_accion = "Verificar si el sensor está desconectado, dañado o hay un problema en la fuente de energía." 
-        elif (i + idx) % 25 == 0:
-            nueva_lectura = 23.0 + np.random.uniform(-1, 1, 1)[0]
-            tipo_anomalia = "Valor Constante"
-            sugerencia_accion = "Inspeccionar el sensor por posibles fallas de congelación, cortocircuito o falta de comunicación." 
+        # Lógica para mantener la falla persistente
+        if st.session_state['sensor_failure_state'][sensor_id]['is_failed']:
+            # Si el sensor ya está en estado de falla, mantiene el tipo y simula el valor
+            original_type = st.session_state['sensor_failure_state'][sensor_id]['original_type']
+            original_suggestion = st.session_state['sensor_failure_state'][sensor_id]['original_suggestion']
+            
+            tipo_anomalia_display = original_type + " (Persistente)"
+            sugerencia_accion_display = original_suggestion
+
+            if original_type == "Pico Alto":
+                nueva_lectura = np.random.uniform(45, 55, 1)[0]
+            elif original_type == "Caída Baja":
+                nueva_lectura = np.random.uniform(5, 10, 1)[0]
+            elif original_type == "Valor Constante":
+                nueva_lectura = 23.0 + np.random.uniform(-1, 1, 1)[0]
+            else: # Fallback, should not be hit if type is set correctly
+                nueva_lectura = 25 + 2 * np.random.randn(1)[0]
+                nueva_lectura = np.clip(nueva_lectura, 20, 30)
+                
+        else:
+            # Si no está en falla, verifica si se activa una nueva anomalía
+            if (i + idx) % 10 == 0:
+                nueva_lectura = np.random.uniform(45, 55, 1)[0]
+                tipo_anomalia_display = "Pico Alto"
+                sugerencia_accion_display = "Revisar posibles sobrecargas, fallos en ventilación o componentes sobrecalentados."
+                st.session_state['sensor_failure_state'][sensor_id] = {'is_failed': True, 'original_type': "Pico Alto", 'original_suggestion': sugerencia_accion_display}
+            elif (i + idx) % 15 == 0:
+                nueva_lectura = np.random.uniform(5, 10, 1)[0]
+                tipo_anomalia_display = "Caída Baja"
+                sugerencia_accion_display = "Verificar si el sensor está desconectado, dañado o hay un problema en la fuente de energía."
+                st.session_state['sensor_failure_state'][sensor_id] = {'is_failed': True, 'original_type': "Caída Baja", 'original_suggestion': sugerencia_accion_display}
+            elif (i + idx) % 25 == 0:
+                nueva_lectura = 23.0 + np.random.uniform(-1, 1, 1)[0]
+                tipo_anomalia_display = "Valor Constante"
+                sugerencia_accion_display = "Inspeccionar el sensor por posibles fallas de congelación, cortocircuito o falta de comunicación."
+                st.session_state['sensor_failure_state'][sensor_id] = {'is_failed': True, 'original_type': "Valor Constante", 'original_suggestion': sugerencia_accion_display}
+            else:
+                nueva_lectura = 25 + 2 * np.random.randn(1)[0]
+                nueva_lectura = np.clip(nueva_lectura, 20, 30)
+                tipo_anomalia_display = "N/A"
+                sugerencia_accion_display = ""
+                st.session_state['sensor_failure_state'][sensor_id] = {'is_failed': False, 'original_type': 'N/A', 'original_suggestion': ''}
 
         model = st.session_state['sensor_models'][sensor_id]
         prediccion = model.predict(np.array(nueva_lectura).reshape(-1, 1))
 
         estado_lectura = "Normal"
         
-        if prediccion == -1:
-            st.session_state['total_anomalies_detected'] += 1 
-            estado_lectura = "ANOMALÍA DETECTADA"
-            anomalies_in_this_iteration = True
+        # Si el modelo detecta una anomalía O si el sensor está en estado de falla persistente
+        if prediccion == -1 or st.session_state['sensor_failure_state'][sensor_id]['is_failed']:
+            # Solo incrementa contadores y envía alerta si el modelo la detectó (para evitar dobles conteos si ya estaba en falla)
+            if prediccion == -1: 
+                st.session_state['total_anomalies_detected'] += 1 
+                current_time = time.time()
+                if (current_time - st.session_state['last_alert_time'][sensor_id]) > COOLDOWN_SECONDS:
+                    send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia_display, sugerencia_accion_display) 
+                    st.session_state['last_alert_time'][sensor_id] = current_time 
+                    st.session_state['total_alerts_sent'] += 1 
 
+            estado_lectura = "ANOMALÍA DETECTADA"
+            anomalies_in_this_iteration = True # Para el indicador de estado global
+
+            # Mostrar alerta y sugerencia de acción en la UI de Streamlit
             mensaje_alerta = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
-                              f"({tipo_anomalia}) en el sensor **{sensor_id}**: **{nueva_lectura:.2f}°C**. "
+                              f"({tipo_anomalia_display}) en el sensor **{sensor_id}**: **{nueva_lectura:.2f}°C**. "
                               f"¡Se recomienda revisar el sistema!")
             alerta_container.error(mensaje_alerta)
-            action_suggestion_container.info(f"💡 **Sugerencia de Acción para {sensor_id}:** {sugerencia_accion}")
-
-            current_time = time.time()
-            if (current_time - st.session_state['last_alert_time'][sensor_id]) > COOLDOWN_SECONDS:
-                send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia, sugerencia_accion) 
-                st.session_state['last_alert_time'][sensor_id] = current_time 
-                st.session_state['total_alerts_sent'] += 1 
+            action_suggestion_container.info(f"💡 **Sugerencia de Acción para {sensor_id}:** {sugerencia_accion_display}")
         
         nueva_fila_historial = pd.DataFrame([{
             'Hora': time.strftime('%H:%M:%S'),
             'Sensor ID': sensor_id,
             'Lectura (°C)': f"{nueva_lectura:.2f}",
             'Estado': estado_lectura,
-            'Tipo de Anomalía': tipo_anomalia,
+            'Tipo de Anomalía': tipo_anomalia_display, # Usar el tipo de anomalía para display (con persistente)
             'valor_numerico': nueva_lectura
         }])
         st.session_state['historial_lecturas_df'] = pd.concat([st.session_state['historial_lecturas_df'], nueva_fila_historial], ignore_index=True)
 
-    # Actualizar los KPIs dentro del bucle usando los contenedores vacíos
     with kpi_container_anomalies.container():
         st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
     with kpi_container_alerts.container():
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-    # Actualizar el indicador de estado global
     with status_indicator_container:
         if anomalies_in_this_iteration:
             st.error("🔴 ESTADO ACTUAL: ANOMALÍA(S) DETECTADA(S)")
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
 
-    # --- Gráfico de Tendencia de Temperatura ---
     with grafico_container.container():
         st.subheader("Gráfico de Tendencia de Temperatura")
         num_lecturas_grafico = 50 * len(SENSOR_IDS) 
@@ -335,7 +366,6 @@ for i in range(1, 101):
         
         st.altair_chart(chart, use_container_width=True)
 
-    # --- Historial de Lecturas Recientes ---
     with historico_container.container():
         st.subheader("Historial de Lecturas Recientes")
         def highlight_anomalies(s):
