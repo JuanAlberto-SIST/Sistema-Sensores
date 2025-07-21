@@ -79,7 +79,6 @@ if 'sensor_models' not in st.session_state:
         model.fit(data_for_model_training)
         st.session_state['sensor_models'][sensor_id] = model
 
-# Nuevo estado para controlar si un sensor está en falla persistente
 if 'sensor_failure_state' not in st.session_state:
     st.session_state['sensor_failure_state'] = {sensor_id: {'is_failed': False, 'original_type': 'N/A', 'original_suggestion': ''} for sensor_id in SENSOR_IDS}
 
@@ -234,9 +233,7 @@ for i in range(1, 101):
         tipo_anomalia_display = "N/A"
         sugerencia_accion_display = ""
 
-        # Lógica para mantener la falla persistente
         if st.session_state['sensor_failure_state'][sensor_id]['is_failed']:
-            # Si el sensor ya está en estado de falla, mantiene el tipo y simula el valor
             original_type = st.session_state['sensor_failure_state'][sensor_id]['original_type']
             original_suggestion = st.session_state['sensor_failure_state'][sensor_id]['original_suggestion']
             
@@ -249,12 +246,11 @@ for i in range(1, 101):
                 nueva_lectura = np.random.uniform(5, 10, 1)[0]
             elif original_type == "Valor Constante":
                 nueva_lectura = 23.0 + np.random.uniform(-1, 1, 1)[0]
-            else: # Fallback, should not be hit if type is set correctly
+            else: 
                 nueva_lectura = 25 + 2 * np.random.randn(1)[0]
                 nueva_lectura = np.clip(nueva_lectura, 20, 30)
                 
         else:
-            # Si no está en falla, verifica si se activa una nueva anomalía
             if (i + idx) % 10 == 0:
                 nueva_lectura = np.random.uniform(45, 55, 1)[0]
                 tipo_anomalia_display = "Pico Alto"
@@ -282,9 +278,7 @@ for i in range(1, 101):
 
         estado_lectura = "Normal"
         
-        # Si el modelo detecta una anomalía O si el sensor está en estado de falla persistente
         if prediccion == -1 or st.session_state['sensor_failure_state'][sensor_id]['is_failed']:
-            # Solo incrementa contadores y envía alerta si el modelo la detectó (para evitar dobles conteos si ya estaba en falla)
             if prediccion == -1: 
                 st.session_state['total_anomalies_detected'] += 1 
                 current_time = time.time()
@@ -294,9 +288,8 @@ for i in range(1, 101):
                     st.session_state['total_alerts_sent'] += 1 
 
             estado_lectura = "ANOMALÍA DETECTADA"
-            anomalies_in_this_iteration = True # Para el indicador de estado global
+            anomalies_in_this_iteration = True 
 
-            # Mostrar alerta y sugerencia de acción en la UI de Streamlit
             mensaje_alerta = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
                               f"({tipo_anomalia_display}) en el sensor **{sensor_id}**: **{nueva_lectura:.2f}°C**. "
                               f"¡Se recomienda revisar el sistema!")
@@ -308,7 +301,7 @@ for i in range(1, 101):
             'Sensor ID': sensor_id,
             'Lectura (°C)': f"{nueva_lectura:.2f}",
             'Estado': estado_lectura,
-            'Tipo de Anomalía': tipo_anomalia_display, # Usar el tipo de anomalía para display (con persistente)
+            'Tipo de Anomalía': tipo_anomalia_display, 
             'valor_numerico': nueva_lectura
         }])
         st.session_state['historial_lecturas_df'] = pd.concat([st.session_state['historial_lecturas_df'], nueva_fila_historial], ignore_index=True)
@@ -326,7 +319,8 @@ for i in range(1, 101):
 
     with grafico_container.container():
         st.subheader("Gráfico de Tendencia de Temperatura")
-        num_lecturas_grafico = 50 * len(SENSOR_IDS) 
+        # Se ha reducido el número de lecturas para intentar mejorar el rendimiento
+        num_lecturas_grafico = 30 * len(SENSOR_IDS) 
         df_para_grafico = st.session_state['historial_lecturas_df'].tail(num_lecturas_grafico).copy()
         
         df_para_grafico['Hora_dt'] = pd.to_datetime(df_para_grafico['Hora'], format='%H:%M:%S')
