@@ -47,14 +47,15 @@ def send_discord_alert(sensor_id, sensor_value, anomaly_type, action_suggestion_
 
 st.set_page_config(page_title="Precisa Temp Multi-Sensor", layout="wide") 
 
-plt.rcParams['text.color'] = 'white'
-plt.rcParams['axes.labelcolor'] = 'white'
-plt.rcParams['xtick.color'] = 'white'
-plt.rcParams['ytick.color'] = 'white' 
-plt.rcParams['axes.facecolor'] = '#1a1a1a'
-plt.rcParams['figure.facecolor'] = '#1a1a1a'
-plt.rcParams['grid.color'] = '#404040'
-plt.rcParams['legend.facecolor'] = '#2a2a2a'
+# Configuración de Matplotlib (aunque Altair es el principal, esto asegura consistencia si se usa plt)
+plt.rcParams['text.color'] = '#E0E0E0' # Texto general
+plt.rcParams['axes.labelcolor'] = '#E0E0E0' # Etiquetas de ejes
+plt.rcParams['xtick.color'] = '#E0E0E0' # Ticks del eje X
+plt.rcParams['ytick.color'] = '#E0E0E0' # Ticks del eje Y
+plt.rcParams['axes.facecolor'] = '#1E2A38' # Fondo de los ejes del gráfico
+plt.rcParams['figure.facecolor'] = '#1E2A38' # Fondo de la figura del gráfico
+plt.rcParams['grid.color'] = '#404040' # Color de la cuadrícula
+plt.rcParams['legend.facecolor'] = '#2C3E50' # Fondo de la leyenda
 
 np.random.seed(42)
 
@@ -102,70 +103,95 @@ if 'historial_lecturas_df' not in st.session_state:
 
 st.markdown("""
 <style>
+/* Fondo general y texto principal */
 .stApp {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+    background-color: #1E2A38; /* Azul oscuro profundo */
+    color: #E0E0E0; /* Texto principal gris claro */
 }
+/* Títulos y subtítulos */
 h1, h2, h3, h4, h5, h6 {
-    color: #f0f0f0;
+    color: #FFD700; /* Dorado brillante para títulos */
 }
+
+/* Estilo para los KPI boxes */
 .stMetric > div {
-    background-color: #333333;
+    background-color: #2C3E50; /* Azul medianoche para el fondo de las tarjetas */
     border-radius: 8px;
     padding: 15px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    color: #f0f0f0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4); /* Sombra más pronunciada */
+    color: #E0E0E0; /* Texto valor KPI */
 }
 .stMetric label {
-    color: #a0a0a0;
+    color: #BDC3C7; /* Plata para etiquetas de KPI */
     font-size: 1.1em;
 }
 .stMetric div[data-testid="stMetricValue"] {
     font-size: 2em;
     font-weight: bold;
-    color: #00FFFF;
+    color: #00FFFF; /* Cian vibrante para los valores */
 }
+
+/* Estilo para la tabla de historial */
 .dataframe {
-    background-color: #333333;
-    color: #e0e0e0;
+    background-color: #2C3E50; /* Azul medianoche para el fondo de tabla */
+    color: #E0E0E0; /* Texto de tabla gris claro */
     border-radius: 8px;
     padding: 10px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
     font-size: 0.9em;
 }
 .dataframe th {
-    background-color: #444444;
-    color: #f0f0f0;
+    background-color: #34495E; /* Azul más claro para encabezados de tabla */
+    color: #F0F0F0; /* Texto de encabezado de tabla */
     padding: 8px;
 }
 .dataframe td {
     padding: 8px;
 }
-.stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] {
-    background-color: #FF6347 !important;
+/* Estilo para el resaltado de anomalías en la tabla */
+.stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] { 
+    background-color: #E74C3C !important; /* Rojo Alizarin más fuerte */
     color: white !important;
     font-weight: bold;
 }
 .stDataFrame tbody tr td div[data-value*="ANOMALÍA"] { 
-    background-color: #FF6347 !important; 
+    background-color: #E74C3C !important; 
     color: white !important;
 }
+
+/* Estilo para los mensajes de alerta Streamlit (st.error, st.warning, st.info, st.success) */
 div[data-testid="stAlert"] {
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 10px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
 }
 div[data-testid="stAlert"] .st-bv { 
-    background-color: #333333; 
-    color: #f0f0f0;
+    background-color: #2C3E50; /* Fondo de alerta azul medianoche */
+    color: #E0E0E0; /* Color de texto de alerta */
 }
 div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] { 
     font-size: 1.1em;
 }
 div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
-    color: #f0f0f0; 
+    color: #E0E0E0; 
 }
+/* Colores específicos para tipos de alerta */
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.success */
+    background-color: #27AE60 !important; /* Verde Esmeralda */
+}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.error */
+    background-color: #C0392B !important; /* Rojo Ladrillo */
+}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.warning */
+    background-color: #F39C12 !important; /* Naranja Calabaza */
+}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.info */
+    background-color: #3498DB !important; /* Azul Peter River */
+}
+
+
+/* Ocultar la barra lateral por completo */
 [data-testid="stSidebar"] {
     display: none !important;
 }
@@ -319,7 +345,6 @@ for i in range(1, 101):
 
     with grafico_container.container():
         st.subheader("Gráfico de Tendencia de Temperatura")
-        # Se ha reducido el número de lecturas para intentar mejorar el rendimiento
         num_lecturas_grafico = 30 * len(SENSOR_IDS) 
         df_para_grafico = st.session_state['historial_lecturas_df'].tail(num_lecturas_grafico).copy()
         
@@ -363,7 +388,7 @@ for i in range(1, 101):
     with historico_container.container():
         st.subheader("Historial de Lecturas Recientes")
         def highlight_anomalies(s):
-            return ['background-color: #FF6347; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
+            return ['background-color: #E74C3C; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
 
         st.dataframe(st.session_state['historial_lecturas_df'].tail(15 * len(SENSOR_IDS)).style.apply(highlight_anomalies, axis=1))
 
