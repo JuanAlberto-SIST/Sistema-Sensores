@@ -3,9 +3,12 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 import time
-import matplotlib.pyplot as plt
 import requests
 import altair as alt
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+MEXICO_CITY_TZ = ZoneInfo("America/Mexico_City")
 
 SENSOR_IDS = ["Sensor_001", "Sensor_002", "Sensor_003", "Sensor_004"] 
 
@@ -15,6 +18,10 @@ def send_discord_alert(sensor_id, sensor_value, anomaly_type, action_suggestion_
     if not DISCORD_WEBHOOK_URL:
         st.warning("🚨 ADVERTENCIA: La URL del Webhook de Discord no está configurada en los Streamlit Secrets.")
         return
+
+    current_utc_time = datetime.now(timezone.utc)
+    current_mexico_city_time = current_utc_time.astimezone(MEXICO_CITY_TZ)
+    formatted_datetime_for_discord = current_mexico_city_time.strftime('%Y-%m-%d %H:%M:%S %Z%z')
 
     message_content = {
         "username": "Sistema de Monitoreo de Sensores",
@@ -29,7 +36,7 @@ def send_discord_alert(sensor_id, sensor_value, anomaly_type, action_suggestion_
                     {"name": "Sensor ID", "value": sensor_id, "inline": True},
                     {"name": "Tipo de Anomalía", "value": anomaly_type, "inline": True},
                     {"name": "Valor del Sensor", "value": f"{sensor_value:.2f}°C", "inline": True},
-                    {"name": "Hora de Detección", "value": time.strftime('%Y-%m-%d %H:%M:%S'), "inline": False}
+                    {"name": "Hora de Detección", "value": formatted_datetime_for_discord, "inline": False}
                 ],
                 "footer": {
                     "text": "Revisa el sistema de monitoreo en Streamlit Cloud"
@@ -46,16 +53,6 @@ def send_discord_alert(sensor_id, sensor_value, anomaly_type, action_suggestion_
         st.error(f"Error al enviar alerta a Discord para {sensor_id}: {e}")
 
 st.set_page_config(page_title="Precisa Temp Multi-Sensor", layout="wide") 
-
-# Configuración de Matplotlib (aunque Altair es el principal, esto asegura consistencia si se usa plt)
-plt.rcParams['text.color'] = '#E0E0E0' # Texto general
-plt.rcParams['axes.labelcolor'] = '#E0E0E0' # Etiquetas de ejes
-plt.rcParams['xtick.color'] = '#E0E0E0' # Ticks del eje X
-plt.rcParams['ytick.color'] = '#E0E0E0' # Ticks del eje Y
-plt.rcParams['axes.facecolor'] = '#1E2A38' # Fondo de los ejes del gráfico
-plt.rcParams['figure.facecolor'] = '#1E2A38' # Fondo de la figura del gráfico
-plt.rcParams['grid.color'] = '#404040' # Color de la cuadrícula
-plt.rcParams['legend.facecolor'] = '#2C3E50' # Fondo de la leyenda
 
 np.random.seed(42)
 
@@ -101,97 +98,98 @@ if 'historial_lecturas_df' not in st.session_state:
     st.session_state['historial_lecturas_df'] = pd.DataFrame(columns=historial_columnas)
     st.session_state['historial_lecturas_df']['valor_numerico'] = st.session_state['historial_lecturas_df']['valor_numerico'].astype(float)
 
+if 'displayed_alert_message' not in st.session_state:
+    st.session_state['displayed_alert_message'] = ""
+if 'displayed_suggestion_message' not in st.session_state:
+    st.session_state['displayed_suggestion_message'] = ""
+
 st.markdown("""
 <style>
-/* Fondo general y texto principal */
 .stApp {
-    background-color: #1E2A38; /* Azul oscuro profundo */
-    color: #E0E0E0; /* Texto principal gris claro */
+    background-color: #0A192F;
+    color: #CCD6F6;
 }
-/* Títulos y subtítulos */
 h1, h2, h3, h4, h5, h6 {
-    color: #FFD700; /* Dorado brillante para títulos */
+    color: #64FFDA;
 }
 
-/* Estilo para los KPI boxes */
 .stMetric > div {
-    background-color: #2C3E50; /* Azul medianoche para el fondo de las tarjetas */
+    background-color: #112240;
     border-radius: 8px;
     padding: 15px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.4); /* Sombra más pronunciada */
-    color: #E0E0E0; /* Texto valor KPI */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    color: #CCD6F6;
+    border: 1px solid #233554;
 }
 .stMetric label {
-    color: #BDC3C7; /* Plata para etiquetas de KPI */
+    color: #8892B0;
     font-size: 1.1em;
 }
 .stMetric div[data-testid="stMetricValue"] {
-    font-size: 2em;
+    font-size: 2.2em;
     font-weight: bold;
-    color: #00FFFF; /* Cian vibrante para los valores */
+    color: #64FFDA;
 }
 
-/* Estilo para la tabla de historial */
 .dataframe {
-    background-color: #2C3E50; /* Azul medianoche para el fondo de tabla */
-    color: #E0E0E0; /* Texto de tabla gris claro */
+    background-color: #112240;
+    color: #CCD6F6;
     border-radius: 8px;
     padding: 10px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     font-size: 0.9em;
+    border: 1px solid #233554;
 }
 .dataframe th {
-    background-color: #34495E; /* Azul más claro para encabezados de tabla */
-    color: #F0F0F0; /* Texto de encabezado de tabla */
+    background-color: #233554;
+    color: #64FFDA;
     padding: 8px;
 }
 .dataframe td {
     padding: 8px;
 }
-/* Estilo para el resaltado de anomalías en la tabla */
 .stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] { 
-    background-color: #E74C3C !important; /* Rojo Alizarin más fuerte */
+    background-color: #FF4D4D !important;
     color: white !important;
     font-weight: bold;
 }
 .stDataFrame tbody tr td div[data-value*="ANOMALÍA"] { 
-    background-color: #E74C3C !important; 
+    background-color: #FF4D4D !important;
     color: white !important;
 }
 
-/* Estilo para los mensajes de alerta Streamlit (st.error, st.warning, st.info, st.success) */
 div[data-testid="stAlert"] {
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 10px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-}
-div[data-testid="stAlert"] .st-bv { 
-    background-color: #2C3E50; /* Fondo de alerta azul medianoche */
-    color: #E0E0E0; /* Color de texto de alerta */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    border: 1px solid;
 }
 div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] { 
     font-size: 1.1em;
+    color: #CCD6F6;
 }
 div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
-    color: #E0E0E0; 
-}
-/* Colores específicos para tipos de alerta */
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.success */
-    background-color: #27AE60 !important; /* Verde Esmeralda */
-}
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.error */
-    background-color: #C0392B !important; /* Rojo Ladrillo */
-}
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.warning */
-    background-color: #F39C12 !important; /* Naranja Calabaza */
-}
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.info */
-    background-color: #3498DB !important; /* Azul Peter River */
+    color: #CCD6F6;
 }
 
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
+    background-color: #28A745 !important;
+    border-color: #218838 !important;
+}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
+    background-color: #DC3545 !important;
+    border-color: #C82333 !important;
+}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
+    background-color: #FFC107 !important;
+    border-color: #E0A800 !important;
+}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
+    background-color: #17A2B8 !important;
+    border-color: #138496 !important;
+}
 
-/* Ocultar la barra lateral por completo */
 [data-testid="stSidebar"] {
     display: none !important;
 }
@@ -242,6 +240,7 @@ st.markdown("---")
 
 alerta_container = st.empty()
 action_suggestion_container = st.empty()
+
 grafico_container = st.empty()
 historico_container = st.empty()
 status_indicator_container = st.empty() 
@@ -249,10 +248,15 @@ status_indicator_container = st.empty()
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
 for i in range(1, 101):
-    alerta_container.empty()
-    action_suggestion_container.empty()
-
+    
     anomalies_in_this_iteration = False
+    
+    current_iteration_alert_message = ""
+    current_iteration_suggestion_message = ""
+
+    current_utc_time = datetime.now(timezone.utc)
+    current_mexico_city_time = current_utc_time.astimezone(MEXICO_CITY_TZ)
+    formatted_time_for_display = current_mexico_city_time.strftime('%H:%M:%S')
 
     for idx, sensor_id in enumerate(SENSOR_IDS):
         nueva_lectura = 0.0
@@ -316,14 +320,13 @@ for i in range(1, 101):
             estado_lectura = "ANOMALÍA DETECTADA"
             anomalies_in_this_iteration = True 
 
-            mensaje_alerta = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
-                              f"({tipo_anomalia_display}) en el sensor **{sensor_id}**: **{nueva_lectura:.2f}°C**. "
-                              f"¡Se recomienda revisar el sistema!")
-            alerta_container.error(mensaje_alerta)
-            action_suggestion_container.info(f"💡 **Sugerencia de Acción para {sensor_id}:** {sugerencia_accion_display}")
+            current_iteration_alert_message = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
+                                                f"({tipo_anomalia_display}) en el sensor **{sensor_id}**: **{nueva_lectura:.2f}°C**. "
+                                                f"¡Se recomienda revisar el sistema!")
+            current_iteration_suggestion_message = (f"💡 **Sugerencia de Acción para {sensor_id}:** {sugerencia_accion_display}")
         
         nueva_fila_historial = pd.DataFrame([{
-            'Hora': time.strftime('%H:%M:%S'),
+            'Hora': formatted_time_for_display,
             'Sensor ID': sensor_id,
             'Lectura (°C)': f"{nueva_lectura:.2f}",
             'Estado': estado_lectura,
@@ -340,21 +343,31 @@ for i in range(1, 101):
     with status_indicator_container:
         if anomalies_in_this_iteration:
             st.error("🔴 ESTADO ACTUAL: ANOMALÍA(S) DETECTADA(S)")
+            st.session_state['displayed_alert_message'] = current_iteration_alert_message
+            st.session_state['displayed_suggestion_message'] = current_iteration_suggestion_message
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
+    
+    if st.session_state['displayed_alert_message']:
+        alerta_container.error(st.session_state['displayed_alert_message'])
+    else:
+        alerta_container.empty()
+
+    if st.session_state['displayed_suggestion_message']:
+        action_suggestion_container.info(st.session_state['displayed_suggestion_message'])
+    else:
+        action_suggestion_container.empty()
+
 
     with grafico_container.container():
         st.subheader("Gráfico de Tendencia de Temperatura")
         num_lecturas_grafico = 30 * len(SENSOR_IDS) 
         df_para_grafico = st.session_state['historial_lecturas_df'].tail(num_lecturas_grafico).copy()
         
-        df_para_grafico['Hora_dt'] = pd.to_datetime(df_para_grafico['Hora'], format='%H:%M:%S')
-        df_para_grafico = df_para_grafico.sort_values(by='Hora_dt').reset_index(drop=True)
-
         line_chart = alt.Chart(df_para_grafico).mark_line().encode( 
-            x=alt.X('Hora_dt', title='Tiempo', axis=alt.Axis(format='%H:%M:%S')), 
-            y=alt.Y('valor_numerico', title='Temperatura (°C)'),
-            color=alt.Color('Sensor ID', title='Sensor'),
+            x=alt.X('Hora', title='Tiempo', axis=alt.Axis(labelAngle=-45, titleColor='#CCD6F6', labelColor='#8892B0')),
+            y=alt.Y('valor_numerico', title='Temperatura (°C)', axis=alt.Axis(titleColor='#CCD6F6', labelColor='#8892B0')), 
+            color=alt.Color('Sensor ID', title='Sensor', scale=alt.Scale(range=['#64FFDA', '#FFD700', '#FF4D4D', '#00BFFF'])), 
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
                 alt.Tooltip('Sensor ID', title='Sensor'),
@@ -362,13 +375,13 @@ for i in range(1, 101):
                 alt.Tooltip('Estado', title='Estado')
             ]
         ).properties(
-            title=f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor'
+            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle', color='#64FFDA') 
         ).interactive()
 
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
-            color='#FF0000', filled=True, size=100, shape='cross'
+            color='#FF4D4D', filled=True, size=120, shape='cross' 
         ).encode(
-            x=alt.X('Hora_dt'), 
+            x=alt.X('Hora'),
             y=alt.Y('valor_numerico'),
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
@@ -388,7 +401,7 @@ for i in range(1, 101):
     with historico_container.container():
         st.subheader("Historial de Lecturas Recientes")
         def highlight_anomalies(s):
-            return ['background-color: #E74C3C; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
+            return ['background-color: #FF4D4D; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
 
         st.dataframe(st.session_state['historial_lecturas_df'].tail(15 * len(SENSOR_IDS)).style.apply(highlight_anomalies, axis=1))
 
