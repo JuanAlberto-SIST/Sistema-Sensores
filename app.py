@@ -6,8 +6,9 @@ import time
 import requests
 import altair as alt
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo # Requiere Python 3.9+
 
+# Definir la zona horaria de la Ciudad de México
 MEXICO_CITY_TZ = ZoneInfo("America/Mexico_City")
 
 SENSOR_IDS = ["Sensor_001", "Sensor_002", "Sensor_003", "Sensor_004"] 
@@ -19,6 +20,7 @@ def send_discord_alert(sensor_id, sensor_value, anomaly_type, action_suggestion_
         st.warning("🚨 ADVERTENCIA: La URL del Webhook de Discord no está configurada en los Streamlit Secrets.")
         return
 
+    # Obtener la hora actual en la zona horaria de la Ciudad de México para la alerta
     current_utc_time = datetime.now(timezone.utc)
     current_mexico_city_time = current_utc_time.astimezone(MEXICO_CITY_TZ)
     formatted_datetime_for_discord = current_mexico_city_time.strftime('%Y-%m-%d %H:%M:%S %Z%z')
@@ -102,38 +104,64 @@ if 'displayed_alert_message' not in st.session_state:
     st.session_state['displayed_alert_message'] = ""
 if 'displayed_suggestion_message' not in st.session_state:
     st.session_state['displayed_suggestion_message'] = ""
+if 'active_alert_sensor_id' not in st.session_state:
+    st.session_state['active_alert_sensor_id'] = None
+
+# Función para reiniciar la simulación
+def reset_simulation():
+    st.session_state['total_anomalies_detected'] = 0
+    st.session_state['total_alerts_sent'] = 0
+    st.session_state['sensor_failure_state'] = {sensor_id: {'is_failed': False, 'original_type': 'N/A', 'original_suggestion': ''} for sensor_id in SENSOR_IDS}
+    st.session_state['last_alert_time'] = {sensor_id: 0 for sensor_id in SENSOR_IDS}
+    st.session_state['historial_lecturas_df'] = pd.DataFrame(columns=historial_columnas)
+    st.session_state['historial_lecturas_df']['valor_numerico'] = st.session_state['historial_lecturas_df']['valor_numerico'].astype(float)
+    st.session_state['displayed_alert_message'] = ""
+    st.session_state['displayed_suggestion_message'] = ""
+    st.session_state['active_alert_sensor_id'] = None
+    # Re-entrenar modelos si es necesario (o solo si contamination_value cambió)
+    for sensor_id in SENSOR_IDS:
+        model = IsolationForest(contamination=st.session_state['contamination_value'], random_state=42)
+        model.fit(data_for_model_training)
+        st.session_state['sensor_models'][sensor_id] = model
+    st.experimental_rerun() # Fuerza una re-ejecución completa para limpiar la UI
 
 st.markdown("""
 <style>
+/* Inspiración: Estilo de terminal/dashboard moderno con tonos oscuros y acentos vibrantes */
+
+/* Fondo general y texto principal */
 .stApp {
-    background-color: #0A192F;
-    color: #CCD6F6;
+    background-color: #0A192F; /* Azul oscuro profundo (similar a VS Code o terminal) */
+    color: #CCD6F6; /* Gris azulado claro para texto principal */
 }
+/* Títulos y subtítulos */
 h1, h2, h3, h4, h5, h6 {
-    color: #64FFDA;
+    color: #64FFDA; /* Cian/Verde menta vibrante para títulos */
 }
 
+/* Estilo para los KPI boxes */
 .stMetric > div {
-    background-color: #112240;
+    background-color: #112240; /* Azul oscuro ligeramente más claro para el fondo de las tarjetas */
     border-radius: 8px;
     padding: 15px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    color: #CCD6F6;
-    border: 1px solid #233554;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* Sombra más pronunciada para un efecto flotante */
+    color: #CCD6F6; /* Texto valor KPI */
+    border: 1px solid #233554; /* Borde sutil */
 }
 .stMetric label {
-    color: #8892B0;
+    color: #8892B0; /* Gris azulado medio para etiquetas de KPI */
     font-size: 1.1em;
 }
 .stMetric div[data-testid="stMetricValue"] {
-    font-size: 2.2em;
+    font-size: 2.2em; /* Valor KPI más grande */
     font-weight: bold;
-    color: #64FFDA;
+    color: #64FFDA; /* Cian vibrante para los valores */
 }
 
+/* Estilo para la tabla de historial */
 .dataframe {
-    background-color: #112240;
-    color: #CCD6F6;
+    background-color: #112240; /* Azul oscuro para el fondo de tabla */
+    color: #CCD6F6; /* Texto de tabla gris azulado claro */
     border-radius: 8px;
     padding: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
@@ -141,57 +169,98 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid #233554;
 }
 .dataframe th {
-    background-color: #233554;
-    color: #64FFDA;
+    background-color: #233554; /* Azul más claro para encabezados de tabla */
+    color: #64FFDA; /* Cian vibrante para encabezados */
     padding: 8px;
 }
 .dataframe td {
     padding: 8px;
 }
+/* Estilo para el resaltado de anomalías en la tabla */
 .stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] { 
-    background-color: #FF4D4D !important;
+    background-color: #FF4D4D !important; /* Rojo vívido */
     color: white !important;
     font-weight: bold;
 }
 .stDataFrame tbody tr td div[data-value*="ANOMALÍA"] { 
-    background-color: #FF4D4D !important;
+    background-color: #FF4D4D !important; /* Rojo vívido */
     color: white !important;
 }
 
+/* Estilo para los mensajes de alerta Streamlit (st.error, st.warning, st.info, st.success) */
 div[data-testid="stAlert"] {
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    border: 1px solid;
+    border: 1px solid; /* Borde para que el color de alerta sea más prominente */
 }
+/* Ajuste para el texto dentro de las alertas */
 div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] { 
     font-size: 1.1em;
-    color: #CCD6F6;
+    color: #CCD6F6; /* Texto de alerta claro */
 }
 div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
-    color: #CCD6F6;
+    color: #CCD6F6; /* Contenido de alerta claro */
 }
 
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
-    background-color: #28A745 !important;
+/* Colores específicos para tipos de alerta */
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.success */
+    background-color: #28A745 !important; /* Verde más brillante */
     border-color: #218838 !important;
 }
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
-    background-color: #DC3545 !important;
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.error */
+    background-color: #DC3545 !important; /* Rojo más brillante */
     border-color: #C82333 !important;
 }
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
-    background-color: #FFC107 !important;
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.warning */
+    background-color: #FFC107 !important; /* Amarillo más brillante */
     border-color: #E0A800 !important;
 }
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
-    background-color: #17A2B8 !important;
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 { /* st.info */
+    background-color: #17A2B8 !important; /* Cian más brillante */
     border-color: #138496 !important;
 }
 
+/* Ocultar la barra lateral por completo */
 [data-testid="stSidebar"] {
     display: none !important;
+}
+
+/* Estilo para los botones */
+.stButton>button {
+    background-color: #64FFDA; /* Cian vibrante */
+    color: #0A192F; /* Texto azul oscuro */
+    border-radius: 8px;
+    border: none;
+    padding: 10px 20px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: all 0.2s ease-in-out;
+}
+.stButton>button:hover {
+    background-color: #52E0C0; /* Cian más claro al pasar el ratón */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+}
+.stButton>button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Estilo para los sliders */
+.stSlider .st-bd .st-be { /* Track */
+    background-color: #233554; /* Azul oscuro para el track */
+}
+.stSlider .st-bd .st-be .st-bf { /* Progress */
+    background-color: #64FFDA; /* Cian vibrante para el progreso */
+}
+.stSlider .st-bd .st-be .st-bf .st-bg { /* Thumb */
+    background-color: #64FFDA; /* Cian vibrante para el pulgar */
+    border: 3px solid #CCD6F6; /* Borde blanco para el pulgar */
+}
+.stSlider label {
+    color: #8892B0; /* Color de la etiqueta del slider */
 }
 </style>
 """, unsafe_allow_html=True)
@@ -201,13 +270,13 @@ st.markdown("---")
 
 st.subheader("Monitoreo de Temperatura en Tiempo Real")
 
-kpi_container_anomalies = st.empty()
-kpi_container_alerts = st.empty()
-
-with kpi_container_anomalies.container():
-    st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
-with kpi_container_alerts.container():
-    st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
+kpi_cols_container = st.container() # Contenedor para los KPIs y botones de control
+with kpi_cols_container:
+    kpi_cols = st.columns(2) 
+    with kpi_cols[0]:
+        st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
+    with kpi_cols[1]:
+        st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
 control_cols = st.columns(2) 
 
@@ -238,8 +307,12 @@ with control_cols[1]:
 
 st.markdown("---")
 
+# Contenedores para alerta y sugerencia (definidos una sola vez)
 alerta_container = st.empty()
 action_suggestion_container = st.empty()
+
+# Contenedor para los estados individuales de los sensores
+sensor_status_container = st.empty()
 
 grafico_container = st.empty()
 historico_container = st.empty()
@@ -247,12 +320,30 @@ status_indicator_container = st.empty()
 
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
+# Botones de acción globales (Reiniciar Simulación y Reconocer Alerta)
+action_buttons_cols = st.columns(2)
+with action_buttons_cols[0]:
+    if st.button("🔄 Reiniciar Simulación"):
+        reset_simulation()
+with action_buttons_cols[1]:
+    # El botón de reconocer alerta solo se muestra si hay una alerta activa
+    if st.session_state['active_alert_sensor_id'] and st.button("✅ Reconocer Alerta Activa"):
+        sensor_id_to_clear = st.session_state['active_alert_sensor_id']
+        st.session_state['sensor_failure_state'][sensor_id_to_clear]['is_failed'] = False
+        st.session_state['displayed_alert_message'] = ""
+        st.session_state['displayed_suggestion_message'] = ""
+        st.session_state['active_alert_sensor_id'] = None
+        st.info(f"Alerta para {sensor_id_to_clear} reconocida. El sensor debería volver a la normalidad si no hay nuevas anomalías.")
+        time.sleep(1) # Pequeña pausa para que el mensaje se vea
+        st.experimental_rerun() # Fuerza una re-ejecución para actualizar la UI
+
 for i in range(1, 101):
     
     anomalies_in_this_iteration = False
     
     current_iteration_alert_message = ""
     current_iteration_suggestion_message = ""
+    current_iteration_alert_sensor_id = None # Para saber qué sensor activó la alerta en esta iteración
 
     current_utc_time = datetime.now(timezone.utc)
     current_mexico_city_time = current_utc_time.astimezone(MEXICO_CITY_TZ)
@@ -320,13 +411,15 @@ for i in range(1, 101):
             estado_lectura = "ANOMALÍA DETECTADA"
             anomalies_in_this_iteration = True 
 
+            # Almacenar el mensaje de alerta y sugerencia para esta iteración
             current_iteration_alert_message = (f"🚨 **¡ALERTA!** Se ha detectado una **ANOMALÍA** "
                                                 f"({tipo_anomalia_display}) en el sensor **{sensor_id}**: **{nueva_lectura:.2f}°C**. "
                                                 f"¡Se recomienda revisar el sistema!")
             current_iteration_suggestion_message = (f"💡 **Sugerencia de Acción para {sensor_id}:** {sugerencia_accion_display}")
-        
+            current_iteration_alert_sensor_id = sensor_id # Guardar el ID del sensor que activó la alerta
+
         nueva_fila_historial = pd.DataFrame([{
-            'Hora': formatted_time_for_display,
+            'Hora': formatted_time_for_display, 
             'Sensor ID': sensor_id,
             'Lectura (°C)': f"{nueva_lectura:.2f}",
             'Estado': estado_lectura,
@@ -335,19 +428,30 @@ for i in range(1, 101):
         }])
         st.session_state['historial_lecturas_df'] = pd.concat([st.session_state['historial_lecturas_df'], nueva_fila_historial], ignore_index=True)
 
-    with kpi_container_anomalies.container():
-        st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
-    with kpi_container_alerts.container():
-        st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
+    # Actualizar los KPIs
+    with kpi_cols_container: # Usar el mismo contenedor para que se actualicen en su lugar
+        kpi_cols = st.columns(2) 
+        with kpi_cols[0]:
+            st.metric(label="Total Anomalías Detectadas", value=st.session_state['total_anomalies_detected'])
+        with kpi_cols[1]:
+            st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
+    # Actualizar el indicador de estado global
     with status_indicator_container:
         if anomalies_in_this_iteration:
             st.error("🔴 ESTADO ACTUAL: ANOMALÍA(S) DETECTADA(S)")
             st.session_state['displayed_alert_message'] = current_iteration_alert_message
             st.session_state['displayed_suggestion_message'] = current_iteration_suggestion_message
+            st.session_state['active_alert_sensor_id'] = current_iteration_alert_sensor_id
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
+            # Si no hay anomalías en esta iteración y no hay una alerta activa persistente, limpiar
+            if not st.session_state['active_alert_sensor_id']: # Solo limpiar si no hay una alerta pendiente de reconocer
+                st.session_state['displayed_alert_message'] = ""
+                st.session_state['displayed_suggestion_message'] = ""
+                st.session_state['active_alert_sensor_id'] = None # Asegurarse de que no haya ID de sensor activo
     
+    # Mostrar los mensajes de alerta y sugerencia basados en el estado persistente
     if st.session_state['displayed_alert_message']:
         alerta_container.error(st.session_state['displayed_alert_message'])
     else:
@@ -357,6 +461,16 @@ for i in range(1, 101):
         action_suggestion_container.info(st.session_state['displayed_suggestion_message'])
     else:
         action_suggestion_container.empty()
+
+    # Mostrar el estado individual de los sensores
+    with sensor_status_container.container():
+        st.subheader("Estado Individual de Sensores")
+        cols_status = st.columns(len(SENSOR_IDS))
+        for idx, sensor_id in enumerate(SENSOR_IDS):
+            with cols_status[idx]:
+                is_failed = st.session_state['sensor_failure_state'][sensor_id]['is_failed']
+                status_emoji = "🔴" if is_failed else "🟢"
+                st.markdown(f"**{sensor_id}**: {status_emoji} {'Anómalo' if is_failed else 'Normal'}")
 
 
     with grafico_container.container():
