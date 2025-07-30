@@ -8,6 +8,7 @@ import altair as alt
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+# Definir la zona horaria de la Ciudad de México
 MEXICO_CITY_TZ = ZoneInfo("America/Mexico_City")
 
 SENSOR_IDS = ["Sensor_001", "Sensor_002", "Sensor_003", "Sensor_004"] 
@@ -103,99 +104,212 @@ if 'displayed_alert_message' not in st.session_state:
 if 'displayed_suggestion_message' not in st.session_state:
     st.session_state['displayed_suggestion_message'] = ""
 
-st.markdown("""
-<style>
-.stApp {
-    background-color: #0A192F;
-    color: #CCD6F6;
-}
-h1, h2, h3, h4, h5, h6 {
-    color: #64FFDA;
+# --- Definición de Temas (Claro y Oscuro) ---
+THEMES = {
+    "dark": {
+        "app_bg": "#0A192F",
+        "text_color": "#CCD6F6",
+        "title_color": "#64FFDA",
+        "metric_bg": "#112240",
+        "metric_label": "#8892B0",
+        "metric_value": "#64FFDA",
+        "dataframe_bg": "#112240",
+        "dataframe_th_bg": "#233554",
+        "dataframe_th_color": "#64FFDA",
+        "anomaly_highlight": "#FF4D4D",
+        "alert_success_bg": "#28A745",
+        "alert_error_bg": "#DC3545",
+        "alert_warning_bg": "#FFC107",
+        "alert_info_bg": "#17A2B8",
+        "border_color": "#233554",
+        "button_bg": "#64FFDA",
+        "button_color": "#0A192F",
+        "slider_track": "#233554",
+        "slider_progress_thumb": "#64FFDA",
+        "slider_thumb_border": "#CCD6F6",
+        "chart_title": "#64FFDA",
+        "chart_axis_title": "#CCD6F6",
+        "chart_axis_label": "#8892B0",
+        "chart_line_colors": ['#64FFDA', '#FFD700', '#FF4D4D', '#00BFFF']
+    },
+    "light": {
+        "app_bg": "#F8F9FA", # Very light gray, almost white
+        "text_color": "#212529", # Dark gray for main text
+        "title_color": "#007BFF", # Bright blue for titles
+        "metric_bg": "#FFFFFF", # White cards
+        "metric_label": "#495057", # Medium dark gray
+        "metric_value": "#007BFF", # Bright blue
+        "dataframe_bg": "#FFFFFF",
+        "dataframe_th_bg": "#E9ECEF", # Light gray for table headers
+        "dataframe_th_color": "#212529", # Dark text for table headers
+        "anomaly_highlight": "#DC3545", # Still vivid red
+        "alert_success_bg": "#28A745",
+        "alert_error_bg": "#DC3545",
+        "alert_warning_bg": "#FFC107",
+        "alert_info_bg": "#17A2B8",
+        "border_color": "#DEE2E6", # Light gray border
+        "button_bg": "#007BFF", # Bright blue button
+        "button_color": "#FFFFFF", # White text on button
+        "slider_track": "#CED4DA", # Light gray
+        "slider_progress_thumb": "#007BFF", # Bright blue
+        "slider_thumb_border": "#FFFFFF", # White thumb border
+        "chart_title": "#212529", # Dark text
+        "chart_axis_title": "#495057", # Medium dark text
+        "chart_axis_label": "#495057", # Medium dark text
+        "chart_line_colors": ['#007BFF', '#FF8C00', '#20C997', '#6F42C1'] # Blue, Dark Orange, Green, Purple
+    }
 }
 
-.stMetric > div {
-    background-color: #112240;
+# Función para obtener el estilo CSS según el tema seleccionado
+def get_css_style(theme_name):
+    theme = THEMES[theme_name]
+    return f"""
+<style>
+.stApp {{
+    background-color: {theme["app_bg"]};
+    color: {theme["text_color"]};
+}}
+h1, h2, h3, h4, h5, h6 {{
+    color: {theme["title_color"]};
+}}
+
+.stMetric > div {{
+    background-color: {theme["metric_bg"]};
     border-radius: 8px;
     padding: 15px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    color: #CCD6F6;
-    border: 1px solid #233554;
-}
-.stMetric label {
-    color: #8892B0;
+    color: {theme["text_color"]};
+    border: 1px solid {theme["border_color"]};
+}}
+.stMetric label {{
+    color: {theme["metric_label"]};
     font-size: 1.1em;
-}
-.stMetric div[data-testid="stMetricValue"] {
+}}
+.stMetric div[data-testid="stMetricValue"] {{
     font-size: 2.2em;
     font-weight: bold;
-    color: #64FFDA;
-}
+    color: {theme["metric_value"]};
+}}
 
-.dataframe {
-    background-color: #112240;
-    color: #CCD6F6;
+.dataframe {{
+    background-color: {theme["dataframe_bg"]};
+    color: {theme["text_color"]};
     border-radius: 8px;
     padding: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     font-size: 0.9em;
-    border: 1px solid #233554;
-}
-.dataframe th {
-    background-color: #233554;
-    color: #64FFDA;
+    border: 1px solid {theme["border_color"]};
+}}
+.dataframe th {{
+    background-color: {theme["dataframe_th_bg"]};
+    color: {theme["dataframe_th_color"]};
     padding: 8px;
-}
-.dataframe td {
+}}
+.dataframe td {{
     padding: 8px;
-}
-.stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] { 
-    background-color: #FF4D4D !important;
+}}
+.stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] {{ 
+    background-color: {theme["anomaly_highlight"]} !important;
     color: white !important;
     font-weight: bold;
-}
-.stDataFrame tbody tr td div[data-value*="ANOMALÍA"] { 
-    background-color: #FF4D4D !important;
+}}
+.stDataFrame tbody tr td div[data-value*="ANOMALÍA"] {{ 
+    background-color: {theme["anomaly_highlight"]} !important;
     color: white !important;
-}
+}}
 
-div[data-testid="stAlert"] {
+div[data-testid="stAlert"] {{
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     border: 1px solid;
-}
-div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] { 
+}}
+div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] {{ 
     font-size: 1.1em;
-    color: #CCD6F6;
-}
-div[data-testid="stAlert"] div[data-testid="stAlertContent"] {
-    color: #CCD6F6;
-}
+    color: {theme["text_color"]};
+}}
+div[data-testid="stAlert"] div[data-testid="stAlertContent"] {{
+    color: {theme["text_color"]};
+}}
 
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
-    background-color: #28A745 !important;
-    border-color: #218838 !important;
-}
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
-    background-color: #DC3545 !important;
-    border-color: #C82333 !important;
-}
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
-    background-color: #FFC107 !important;
-    border-color: #E0A800 !important;
-}
-div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {
-    background-color: #17A2B8 !important;
-    border-color: #138496 !important;
-}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {{
+    background-color: {theme["alert_success_bg"]} !important;
+    border-color: {theme["alert_success_bg"]} !important;
+}}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {{
+    background-color: {theme["alert_error_bg"]} !important;
+    border-color: {theme["alert_error_bg"]} !important;
+}}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {{
+    background-color: {theme["alert_warning_bg"]} !important;
+    border-color: {theme["alert_warning_bg"]} !important;
+}}
+div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {{
+    background-color: {theme["alert_info_bg"]} !important;
+    border-color: {theme["alert_info_bg"]} !important;
+}}
 
-[data-testid="stSidebar"] {
-    display: none !important;
-}
+[data-testid="stSidebar"] {{
+    background-color: {theme["dataframe_bg"]}; /* Sidebar background matches card/table background */
+    color: {theme["text_color"]};
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    padding-top: 20px;
+    padding-left: 10px;
+    padding-right: 10px;
+}}
+.stRadio > label > div > div {{
+    color: {theme["text_color"]}; /* Color de texto para las opciones de radio */
+}}
+.stRadio > label > div > div > div {{
+    color: {theme["text_color"]}; /* Color de texto para las opciones de radio */
+}}
+
+
+.stButton>button {{
+    background-color: {theme["button_bg"]};
+    color: {theme["button_color"]};
+    border-radius: 8px;
+    border: none;
+    padding: 10px 20px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: all 0.2s ease-in-out;
+}}
+.stButton>button:hover {{
+    background-color: {theme["button_bg"]}CC; /* Slightly transparent on hover */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+}}
+.stButton>button:active {{
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}}
+
+.stSlider .st-bd .st-be {{
+    background-color: {theme["slider_track"]};
+}}
+.stSlider .st-bd .st-be .st-bf {{
+    background-color: {theme["slider_progress_thumb"]};
+}}
+.stSlider .st-bd .st-be .st-bf .st-bg {{
+    background-color: {theme["slider_progress_thumb"]};
+    border: 3px solid {theme["slider_thumb_border"]};
+}}
+.stSlider label {{
+    color: {theme["metric_label"]};
+}}
 </style>
-""", unsafe_allow_html=True)
+"""
 
+# Inicializar el tema en session_state si no existe
+if 'theme' not in st.session_state:
+    st.session_state['theme'] = 'dark' # Tema oscuro por defecto
+
+# Aplicar el CSS basado en el tema actual
+st.markdown(get_css_style(st.session_state['theme']), unsafe_allow_html=True)
+
+# --- Contenido de la Aplicación ---
 st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores (Multi-Sensor)") 
 st.markdown("---") 
 
@@ -247,7 +361,29 @@ status_indicator_container = st.empty()
 
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
+# --- Selector de Tema en la Barra Lateral ---
+st.sidebar.title("Configuración de Tema")
+selected_theme_option = st.sidebar.radio(
+    "Selecciona el tema:",
+    ('Oscuro', 'Claro'),
+    index=0 if st.session_state['theme'] == 'dark' else 1 # Marca la opción actual
+)
+
+# Detectar cambio y actualizar el tema
+if selected_theme_option == 'Oscuro' and st.session_state['theme'] != 'dark':
+    st.session_state['theme'] = 'dark'
+    st.experimental_rerun() # Fuerza la re-ejecución para aplicar el nuevo CSS
+elif selected_theme_option == 'Claro' and st.session_state['theme'] != 'light':
+    st.session_state['theme'] = 'light'
+    st.experimental_rerun() # Fuerza la re-ejecución para aplicar el nuevo CSS
+
+# Obtener el tema actual para usar sus colores en Altair
+current_theme_colors = THEMES[st.session_state['theme']]
+
+
 for i in range(1, 101):
+    alerta_container.empty() 
+    action_suggestion_container.empty()
     
     anomalies_in_this_iteration = False
     
@@ -326,7 +462,7 @@ for i in range(1, 101):
             current_iteration_suggestion_message = (f"💡 **Sugerencia de Acción para {sensor_id}:** {sugerencia_accion_display}")
         
         nueva_fila_historial = pd.DataFrame([{
-            'Hora': formatted_time_for_display,
+            'Hora': formatted_time_for_display, 
             'Sensor ID': sensor_id,
             'Lectura (°C)': f"{nueva_lectura:.2f}",
             'Estado': estado_lectura,
@@ -347,6 +483,8 @@ for i in range(1, 101):
             st.session_state['displayed_suggestion_message'] = current_iteration_suggestion_message
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
+            st.session_state['displayed_alert_message'] = "" 
+            st.session_state['displayed_suggestion_message'] = ""
     
     if st.session_state['displayed_alert_message']:
         alerta_container.error(st.session_state['displayed_alert_message'])
@@ -365,9 +503,9 @@ for i in range(1, 101):
         df_para_grafico = st.session_state['historial_lecturas_df'].tail(num_lecturas_grafico).copy()
         
         line_chart = alt.Chart(df_para_grafico).mark_line().encode( 
-            x=alt.X('Hora', title='Tiempo', axis=alt.Axis(labelAngle=-45, titleColor='#CCD6F6', labelColor='#8892B0')),
-            y=alt.Y('valor_numerico', title='Temperatura (°C)', axis=alt.Axis(titleColor='#CCD6F6', labelColor='#8892B0')), 
-            color=alt.Color('Sensor ID', title='Sensor', scale=alt.Scale(range=['#64FFDA', '#FFD700', '#FF4D4D', '#00BFFF'])), 
+            x=alt.X('Hora', title='Tiempo', axis=alt.Axis(labelAngle=-45, titleColor=current_theme_colors['chart_axis_title'], labelColor=current_theme_colors['chart_axis_label'])),
+            y=alt.Y('valor_numerico', title='Temperatura (°C)', axis=alt.Axis(titleColor=current_theme_colors['chart_axis_title'], labelColor=current_theme_colors['chart_axis_label'])), 
+            color=alt.Color('Sensor ID', title='Sensor', scale=alt.Scale(range=current_theme_colors['chart_line_colors'])), 
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
                 alt.Tooltip('Sensor ID', title='Sensor'),
@@ -375,11 +513,11 @@ for i in range(1, 101):
                 alt.Tooltip('Estado', title='Estado')
             ]
         ).properties(
-            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle', color='#64FFDA') 
+            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle', color=current_theme_colors['chart_title']) 
         ).interactive()
 
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
-            color='#FF4D4D', filled=True, size=120, shape='cross' 
+            color=current_theme_colors['anomaly_highlight'], filled=True, size=120, shape='cross' 
         ).encode(
             x=alt.X('Hora'),
             y=alt.Y('valor_numerico'),
@@ -401,7 +539,7 @@ for i in range(1, 101):
     with historico_container.container():
         st.subheader("Historial de Lecturas Recientes")
         def highlight_anomalies(s):
-            return ['background-color: #FF4D4D; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
+            return [f'background-color: {current_theme_colors["anomaly_highlight"]}; color: white; font-weight: bold;' if 'ANOMALÍA' in str(v) else '' for v in s]
 
         st.dataframe(st.session_state['historial_lecturas_df'].tail(15 * len(SENSOR_IDS)).style.apply(highlight_anomalies, axis=1))
 
