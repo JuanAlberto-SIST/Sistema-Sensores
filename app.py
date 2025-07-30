@@ -131,7 +131,8 @@ THEMES = {
         "chart_axis_title": "#CCD6F6", # Usar text_color para mejor visibilidad
         "chart_axis_label": "#CCD6F6", # Usar text_color para mejor visibilidad
         "chart_line_colors": ['#64FFDA', '#FFD700', '#FF4D4D', '#00BFFF'],
-        "chart_background": "#112240" # Fondo oscuro para la gráfica en modo oscuro
+        "chart_background": "#112240", # Fondo oscuro para la gráfica en modo oscuro
+        "chart_grid_color": "#233554" # Color de la cuadrícula para tema oscuro
     },
     "light": {
         "app_bg": "#F8F9FA", # Very light gray, almost white
@@ -158,7 +159,8 @@ THEMES = {
         "chart_axis_title": "#000000", # PURE BLACK
         "chart_axis_label": "#000000", # PURE BLACK
         "chart_line_colors": ['#007BFF', '#FF8C00', '#20C997', '#6F42C1'], # Blue, Dark Orange, Green, Purple
-        "chart_background": "#FFFFFF" # Fondo blanco para la gráfica en modo claro
+        "chart_background": "#FFFFFF", # Fondo blanco para la gráfica en modo claro
+        "chart_grid_color": "#CED4DA" # Color de la cuadrícula para tema claro
     }
 }
 
@@ -557,7 +559,8 @@ for i in range(1, 101):
             color=current_theme_colors['chart_title'] 
         ).configure_axis(
             titleColor=current_theme_colors['chart_axis_title'], 
-            labelColor=current_theme_colors['chart_axis_label']  
+            labelColor=current_theme_colors['chart_axis_label'],
+            gridColor=current_theme_colors['chart_grid_color'] # Añadido el color de la cuadrícula
         ).configure_legend( # Configurar el color del texto de la leyenda
             titleColor=current_theme_colors['chart_axis_title'],
             labelColor=current_theme_colors['chart_axis_label']
