@@ -524,17 +524,7 @@ for i in range(1, 101):
                 alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
                 alt.Tooltip('Estado', title='Estado')
             ]
-        ).properties(
-            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle') 
-        ).interactive().configure_view(
-            # Establecer el color de fondo de la gráfica explícitamente
-            fill=current_theme_colors['chart_background'] 
-        ).configure_title(
-            color=current_theme_colors['chart_title'] # Color del título de la gráfica
-        ).configure_axis(
-            titleColor=current_theme_colors['chart_axis_title'], # Color del título del eje
-            labelColor=current_theme_colors['chart_axis_label']  # Color de las etiquetas del eje
-        )
+        ) # NO aplicar .properties() ni .interactive() aquí
 
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
             color=current_theme_colors['anomaly_highlight'], filled=True, size=120, shape='cross' 
@@ -548,11 +538,23 @@ for i in range(1, 101):
                 alt.Tooltip('Estado', title='Estado'),
                 alt.Tooltip('Tipo de Anomalía', title='Tipo Anomalía')
             ]
-        )
+        ) # NO aplicar .properties() ni .interactive() aquí
 
-        # Aplicar resolve_scale de forma separada al gráfico combinado
+        # Combinar los gráficos y luego aplicar propiedades e interactividad
         chart = alt.layer(line_chart, anomaly_points)
-        chart = chart.resolve_scale(y='independent')
+        chart = chart.resolve_scale(y='independent') # Aplicar resolve_scale al gráfico combinado
+        
+        # Aplicar propiedades e interactividad al gráfico final
+        chart = chart.properties(
+            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle') 
+        ).interactive().configure_view(
+            fill=current_theme_colors['chart_background'] 
+        ).configure_title(
+            color=current_theme_colors['chart_title'] 
+        ).configure_axis(
+            titleColor=current_theme_colors['chart_axis_title'], 
+            labelColor=current_theme_colors['chart_axis_label']  
+        )
         
         st.altair_chart(chart, use_container_width=True)
 
