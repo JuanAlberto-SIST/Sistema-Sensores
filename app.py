@@ -499,7 +499,8 @@ for i in range(1, 101):
                 st.session_state['total_anomalies_detected'] += 1 
                 current_time = time.time()
                 if (current_time - st.session_state['last_alert_time'][sensor_id]) > COOLDOWN_SECONDS:
-                    send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia_display, sugerencia_accion_analysis) 
+                    # Corrected variable name from sugerencia_accion_analysis to sugerencia_accion_display
+                    send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia_display, sugerencia_accion_display) 
                     st.session_state['last_alert_time'][sensor_id] = current_time 
                     st.session_state['total_alerts_sent'] += 1 
 
