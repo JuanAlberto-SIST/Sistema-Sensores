@@ -176,7 +176,8 @@ h1, h2, h3, h4, h5, h6 {{
 }}
 
 /* Targeting specific Streamlit text containers */
-div.stMarkdown, div.stText, div[data-testid*="stMarkdown"], div[data-testid*="stText"] {{
+/* More aggressive targeting for all text elements */
+div[data-testid*="stMarkdown"], div[data-testid*="stText"], div[data-testid*="stBlock"] p, div[data-testid*="stBlock"] span, div[data-testid*="stBlock"] label {{
     color: {theme["text_color"]} !important;
 }}
 
@@ -266,10 +267,8 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
     padding-left: 10px;
     padding-right: 10px;
 }}
-.stRadio > label > div > div {{
-    color: {theme["text_color"]} !important; /* Color de texto para las opciones de radio */
-}}
-.stRadio > label > div > div > div {{
+/* More specific targeting for radio button text */
+.stRadio label, .stRadio div[data-testid*="stRadio"] label, .stRadio div[data-testid*="stRadio"] div {{
     color: {theme["text_color"]} !important; /* Color de texto para las opciones de radio */
 }}
 
@@ -559,6 +558,11 @@ for i in range(1, 101):
         ).configure_axis(
             titleColor=current_theme_colors['chart_axis_title'], 
             labelColor=current_theme_colors['chart_axis_label']  
+        ).configure_legend( # Configurar el color del texto de la leyenda
+            titleColor=current_theme_colors['chart_axis_title'],
+            labelColor=current_theme_colors['chart_axis_label']
+        ).configure_text( # Configurar el color de cualquier texto de marca (si se usa)
+            color=current_theme_colors['text_color']
         )
         
         st.altair_chart(chart, use_container_width=True)
