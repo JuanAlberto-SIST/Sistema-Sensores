@@ -176,7 +176,7 @@ h1, h2, h3, h4, h5, h6 {{
 }}
 
 /* Targeting specific Streamlit text containers */
-div.stMarkdown, div.stText, div[data-testid="stVerticalBlock"] > div > div > div.stMarkdown {{
+div.stMarkdown, div.stText, div[data-testid*="stMarkdown"], div[data-testid*="stText"] {{
     color: {theme["text_color"]} !important;
 }}
 
@@ -511,7 +511,7 @@ for i in range(1, 101):
     if st.session_state['displayed_suggestion_message']:
         action_suggestion_container.info(st.session_state['displayed_suggestion_message'])
     else:
-        action_container.empty() # Solo limpiar si no hay mensaje persistente
+        action_suggestion_container.empty() # Corregido: Usar action_suggestion_container.empty()
 
 
     with grafico_container.container():
