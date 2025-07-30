@@ -308,10 +308,6 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
 .stSlider label {{
     color: {theme["metric_label"]} !important;
 }}
-/* Force text color inside Altair charts (SVG elements) */
-div[data-testid="stVegaLiteChart"] svg text {
-    fill: {theme["text_color"]} !important;
-}
 </style>
 """
 
