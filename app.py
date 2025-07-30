@@ -130,7 +130,8 @@ THEMES = {
         "chart_title": "#CCD6F6", # Usar text_color para mejor visibilidad
         "chart_axis_title": "#CCD6F6", # Usar text_color para mejor visibilidad
         "chart_axis_label": "#CCD6F6", # Usar text_color para mejor visibilidad
-        "chart_line_colors": ['#64FFDA', '#FFD700', '#FF4D4D', '#00BFFF']
+        "chart_line_colors": ['#64FFDA', '#FFD700', '#FF4D4D', '#00BFFF'],
+        "chart_background": "#112240" # Fondo oscuro para la gráfica en modo oscuro
     },
     "light": {
         "app_bg": "#F8F9FA", # Very light gray, almost white
@@ -156,7 +157,8 @@ THEMES = {
         "chart_title": "#212529", # Dark text
         "chart_axis_title": "#495057", # Medium dark text
         "chart_axis_label": "#495057", # Medium dark text
-        "chart_line_colors": ['#007BFF', '#FF8C00', '#20C997', '#6F42C1'] # Blue, Dark Orange, Green, Purple
+        "chart_line_colors": ['#007BFF', '#FF8C00', '#20C997', '#6F42C1'], # Blue, Dark Orange, Green, Purple
+        "chart_background": "#FFFFFF" # Fondo blanco para la gráfica en modo claro
     }
 }
 
@@ -166,47 +168,48 @@ def get_css_style(theme_name):
     return f"""
 <style>
 .stApp {{
-    background-color: {theme["app_bg"]};
-    color: {theme["text_color"]};
+    background-color: {theme["app_bg"]} !important;
+    color: {theme["text_color"]} !important;
 }}
 h1, h2, h3, h4, h5, h6 {{
-    color: {theme["title_color"]};
+    color: {theme["title_color"]} !important;
 }}
 
 .stMetric > div {{
-    background-color: {theme["metric_bg"]};
+    background-color: {theme["metric_bg"]} !important;
     border-radius: 8px;
     padding: 15px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    color: {theme["text_color"]};
-    border: 1px solid {theme["border_color"]};
+    color: {theme["text_color"]} !important; /* Asegurar color de texto en métricas */
+    border: 1px solid {theme["border_color"]} !important;
 }}
 .stMetric label {{
-    color: {theme["metric_label"]};
+    color: {theme["metric_label"]} !important;
     font-size: 1.1em;
 }}
 .stMetric div[data-testid="stMetricValue"] {{
     font-size: 2.2em;
     font-weight: bold;
-    color: {theme["metric_value"]};
+    color: {theme["metric_value"]} !important;
 }}
 
 .dataframe {{
-    background-color: {theme["dataframe_bg"]};
-    color: {theme["text_color"]};
+    background-color: {theme["dataframe_bg"]} !important;
+    color: {theme["text_color"]} !important; /* Asegurar color de texto en dataframe */
     border-radius: 8px;
     padding: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     font-size: 0.9em;
-    border: 1px solid {theme["border_color"]};
+    border: 1px solid {theme["border_color"]} !important;
 }}
 .dataframe th {{
-    background-color: {theme["dataframe_th_bg"]};
-    color: {theme["dataframe_th_color"]};
+    background-color: {theme["dataframe_th_bg"]} !important;
+    color: {theme["dataframe_th_color"]} !important;
     padding: 8px;
 }}
 .dataframe td {{
     padding: 8px;
+    color: {theme["text_color"]} !important; /* Asegurar color de texto en celdas de tabla */
 }}
 .stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] {{ 
     background-color: {theme["anomaly_highlight"]} !important;
@@ -227,10 +230,10 @@ div[data-testid="stAlert"] {{
 }}
 div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] {{ 
     font-size: 1.1em;
-    color: {theme["text_color"]};
+    color: {theme["text_color"]} !important; /* Asegurar color de texto en alertas */
 }}
 div[data-testid="stAlert"] div[data-testid="stAlertContent"] {{
-    color: {theme["text_color"]};
+    color: {theme["text_color"]} !important; /* Asegurar color de texto en contenido de alertas */
 }}
 
 div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {{
@@ -251,24 +254,24 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
 }}
 
 [data-testid="stSidebar"] {{
-    background-color: {theme["dataframe_bg"]}; /* Sidebar background matches card/table background */
-    color: {theme["text_color"]};
+    background-color: {theme["dataframe_bg"]} !important; /* Sidebar background matches card/table background */
+    color: {theme["text_color"]} !important; /* Asegurar color de texto en sidebar */
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     padding-top: 20px;
     padding-left: 10px;
     padding-right: 10px;
 }}
 .stRadio > label > div > div {{
-    color: {theme["text_color"]}; /* Color de texto para las opciones de radio */
+    color: {theme["text_color"]} !important; /* Color de texto para las opciones de radio */
 }}
 .stRadio > label > div > div > div {{
-    color: {theme["text_color"]}; /* Color de texto para las opciones de radio */
+    color: {theme["text_color"]} !important; /* Color de texto para las opciones de radio */
 }}
 
 
 .stButton>button {{
-    background-color: {theme["button_bg"]};
-    color: {theme["button_color"]};
+    background-color: {theme["button_bg"]} !important;
+    color: {theme["button_color"]} !important;
     border-radius: 8px;
     border: none;
     padding: 10px 20px;
@@ -277,7 +280,7 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
     transition: all 0.2s ease-in-out;
 }}
 .stButton>button:hover {{
-    background-color: {theme["button_bg"]}CC; /* Slightly transparent on hover */
+    background-color: {theme["button_bg"]}CC !important; /* Slightly transparent on hover */
     box-shadow: 0 6px 12px rgba(0,0,0,0.4);
     transform: translateY(-2px);
 }}
@@ -287,17 +290,17 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
 }}
 
 .stSlider .st-bd .st-be {{
-    background-color: {theme["slider_track"]};
+    background-color: {theme["slider_track"]} !important;
 }}
 .stSlider .st-bd .st-be .st-bf {{
-    background-color: {theme["slider_progress_thumb"]};
+    background-color: {theme["slider_progress_thumb"]} !important;
 }}
 .stSlider .st-bd .st-be .st-bf .st-bg {{
-    background-color: {theme["slider_progress_thumb"]};
-    border: 3px solid {theme["slider_thumb_border"]};
+    background-color: {theme["slider_progress_thumb"]} !important;
+    border: 3px solid {theme["slider_thumb_border"]} !important;
 }}
 .stSlider label {{
-    color: {theme["metric_label"]};
+    color: {theme["metric_label"]} !important;
 }}
 </style>
 """
@@ -382,12 +385,6 @@ current_theme_colors = THEMES[st.session_state['theme']]
 
 
 for i in range(1, 101):
-    # Estas líneas se movieron aquí para evitar el parpadeo de las alertas
-    # Se limpian los contenedores solo si no hay una alerta activa para mostrar
-    if not st.session_state['displayed_alert_message']:
-        alerta_container.empty() 
-    if not st.session_state['displayed_suggestion_message']:
-        action_suggestion_container.empty()
     
     anomalies_in_this_iteration = False
     
@@ -480,17 +477,27 @@ for i in range(1, 101):
     with kpi_container_alerts.container():
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
+    # Determinar si algún sensor está en estado de falla persistente
+    any_sensor_failed = any(st.session_state['sensor_failure_state'][s_id]['is_failed'] for s_id in SENSOR_IDS)
+
     with status_indicator_container:
-        if anomalies_in_this_iteration:
+        if any_sensor_failed:
             st.error("🔴 ESTADO ACTUAL: ANOMALÍA(S) DETECTADA(S)")
-            st.session_state['displayed_alert_message'] = current_iteration_alert_message
-            st.session_state['displayed_suggestion_message'] = current_iteration_suggestion_message
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
-            st.session_state['displayed_alert_message'] = "" 
-            st.session_state['displayed_suggestion_message'] = ""
     
-    # Estos se muestran condicionalmente al final del bucle
+    # Lógica para mantener los mensajes de alerta estables
+    if any_sensor_failed:
+        if current_iteration_alert_message: # Si se detectó una nueva anomalía en esta iteración
+            st.session_state['displayed_alert_message'] = current_iteration_alert_message
+            st.session_state['displayed_suggestion_message'] = current_iteration_suggestion_message
+        # Si no hay nueva anomalía en esta iteración pero hay sensores fallando, se mantiene el mensaje anterior
+    else:
+        # Si todos los sensores están normales, entonces se limpian los mensajes
+        st.session_state['displayed_alert_message'] = "" 
+        st.session_state['displayed_suggestion_message'] = ""
+    
+    # Mostrar los mensajes de alerta y sugerencia
     if st.session_state['displayed_alert_message']:
         alerta_container.error(st.session_state['displayed_alert_message'])
     else:
@@ -508,8 +515,8 @@ for i in range(1, 101):
         df_para_grafico = st.session_state['historial_lecturas_df'].tail(num_lecturas_grafico).copy()
         
         line_chart = alt.Chart(df_para_grafico).mark_line().encode( 
-            x=alt.X('Hora', title='Tiempo', axis=alt.Axis(labelAngle=-45, titleColor=current_theme_colors['chart_axis_title'], labelColor=current_theme_colors['chart_axis_label'])),
-            y=alt.Y('valor_numerico', title='Temperatura (°C)', axis=alt.Axis(titleColor=current_theme_colors['chart_axis_title'], labelColor=current_theme_colors['chart_axis_label'])), 
+            x=alt.X('Hora', title='Tiempo'),
+            y=alt.Y('valor_numerico', title='Temperatura (°C)'), 
             color=alt.Color('Sensor ID', title='Sensor', scale=alt.Scale(range=current_theme_colors['chart_line_colors'])), 
             tooltip=[
                 alt.Tooltip('Hora', title='Hora'), 
@@ -518,8 +525,17 @@ for i in range(1, 101):
                 alt.Tooltip('Estado', title='Estado')
             ]
         ).properties(
-            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle', color=current_theme_colors['chart_title']) 
-        ).interactive()
+            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle') 
+        ).interactive().configure_view(
+            # Establecer el color de fondo de la gráfica explícitamente
+            fill=current_theme_colors['chart_background'] 
+        ).configure_title(
+            color=current_theme_colors['chart_title'] # Color del título de la gráfica
+        ).configure_axis(
+            titleColor=current_theme_colors['chart_axis_title'], # Color del título del eje
+            labelColor=current_theme_colors['chart_axis_label']  # Color de las etiquetas del eje
+        )
+
 
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
             color=current_theme_colors['anomaly_highlight'], filled=True, size=120, shape='cross' 
