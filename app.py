@@ -372,10 +372,10 @@ selected_theme_option = st.sidebar.radio(
 # Detectar cambio y actualizar el tema
 if selected_theme_option == 'Oscuro' and st.session_state['theme'] != 'dark':
     st.session_state['theme'] = 'dark'
-    st.experimental_rerun() # Fuerza la re-ejecución para aplicar el nuevo CSS
+    st.rerun() # Fuerza la re-ejecución para aplicar el nuevo CSS
 elif selected_theme_option == 'Claro' and st.session_state['theme'] != 'light':
     st.session_state['theme'] = 'light'
-    st.experimental_rerun() # Fuerza la re-ejecución para aplicar el nuevo CSS
+    st.rerun() # Fuerza la re-ejecución para aplicar el nuevo CSS
 
 # Obtener el tema actual para usar sus colores en Altair
 current_theme_colors = THEMES[st.session_state['theme']]
