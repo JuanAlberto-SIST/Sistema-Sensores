@@ -599,7 +599,8 @@ for i in range(1, 101):
         # Combinar los gráficos y luego aplicar propiedades e interactividad.
         # Las configuraciones de color de texto para el gráfico ahora se manejan a través del tema de Altair.
         chart = alt.layer(line_chart, anomaly_points).properties(
-            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle') 
+            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle'),
+            background=current_theme_colors['chart_background'] # Explicitly set background here
         ).interactive()
         
         st.altair_chart(chart, use_container_width=True)
