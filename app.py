@@ -308,6 +308,20 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
 .stSlider label {{
     color: {theme["metric_label"]} !important;
 }}
+/* Force text color inside Altair charts */
+div[data-testid="stVegaLiteChart"] svg text,
+div[data-testid="stVegaLiteChart"] svg .mark-text text,
+div[data-testid="stVegaLiteChart"] svg .mark-axis text,
+div[data-testid="stVegaLiteChart"] svg .mark-legend text,
+div[data-testid="stVegaLiteChart"] svg .mark-title text,
+div[data-testid="stVegaLiteChart"] svg .mark-label text,
+div[data-testid="stVegaLiteChart"] svg .mark-rule text,
+div[data-testid="stVegaLiteChart"] svg .mark-grid text,
+div[data-testid="stVegaLiteChart"] svg .mark-tick text
+{
+    fill: {theme["text_color"]} !important;
+    color: {theme["text_color"]} !important; /* Both fill and color for SVG text */
+}
 </style>
 """
 
@@ -322,7 +336,8 @@ def create_altair_theme(theme_name):
             "axis": {
                 "titleColor": theme["chart_axis_title"],
                 "labelColor": theme["chart_axis_label"],
-                "gridColor": theme["chart_grid_color"]
+                "gridColor": theme["chart_grid_color"],
+                "labelOverlap": "false" # Added this
             },
             "legend": {
                 "titleColor": theme["chart_axis_title"],
@@ -337,6 +352,11 @@ def create_altair_theme(theme_name):
             },
             "range": {
                 "category": theme["chart_line_colors"] # For line colors
+            },
+            "style": { # General style for text
+                "text": {
+                    "fill": theme["text_color"]
+                }
             }
         }
     }
