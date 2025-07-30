@@ -311,12 +311,54 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
 </style>
 """
 
+# Function to create a custom Altair theme
+def create_altair_theme(theme_name):
+    theme = THEMES[theme_name]
+    return {
+        "config": {
+            "title": {
+                "color": theme["chart_title"]
+            },
+            "axis": {
+                "titleColor": theme["chart_axis_title"],
+                "labelColor": theme["chart_axis_label"],
+                "gridColor": theme["chart_grid_color"]
+            },
+            "legend": {
+                "titleColor": theme["chart_axis_title"],
+                "labelColor": theme["chart_axis_label"]
+            },
+            "text": { # For text marks
+                "color": theme["text_color"]
+            },
+            "view": {
+                "stroke": "transparent", # No border around the chart
+                "fill": theme["chart_background"]
+            },
+            "range": {
+                "category": theme["chart_line_colors"] # For line colors
+            }
+        }
+    }
+
+# Register the custom Altair themes
+alt.themes.register("custom_dark", lambda: create_altair_theme("dark"))
+alt.themes.register("custom_light", lambda: create_altair_theme("light"))
+
+
 # Inicializar el tema en session_state si no existe
 if 'theme' not in st.session_state:
     st.session_state['theme'] = 'dark' # Tema oscuro por defecto
 
 # Aplicar el CSS basado en el tema actual
 st.markdown(get_css_style(st.session_state['theme']), unsafe_allow_html=True)
+
+# Aplicar el tema de Altair basado en session state
+if st.session_state['theme'] == 'dark':
+    alt.themes.enable("custom_dark")
+else:
+    alt.themes.enable("custom_light")
+
 
 # --- Contenido de la Aplicación ---
 st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores (Multi-Sensor)") 
@@ -367,6 +409,7 @@ action_suggestion_container = st.empty()
 grafico_container = st.empty()
 historico_container = st.empty()
 status_indicator_container = st.empty() 
+
 
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
@@ -456,7 +499,7 @@ for i in range(1, 101):
                 st.session_state['total_anomalies_detected'] += 1 
                 current_time = time.time()
                 if (current_time - st.session_state['last_alert_time'][sensor_id]) > COOLDOWN_SECONDS:
-                    send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia_display, sugerencia_accion_display) 
+                    send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia_display, sugerencia_accion_analysis) 
                     st.session_state['last_alert_time'][sensor_id] = current_time 
                     st.session_state['total_alerts_sent'] += 1 
 
@@ -530,7 +573,7 @@ for i in range(1, 101):
                 alt.Tooltip('valor_numerico', title='Temp', format='.2f'),
                 alt.Tooltip('Estado', title='Estado')
             ]
-        ) # NO aplicar .properties() ni .interactive() aquí
+        )
 
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
             color=current_theme_colors['anomaly_highlight'], filled=True, size=120, shape='cross' 
@@ -544,29 +587,13 @@ for i in range(1, 101):
                 alt.Tooltip('Estado', title='Estado'),
                 alt.Tooltip('Tipo de Anomalía', title='Tipo Anomalía')
             ]
-        ) # NO aplicar .properties() ni .interactive() aquí
-
-        # Combinar los gráficos y luego aplicar propiedades e interactividad
-        chart = alt.layer(line_chart, anomaly_points)
-        chart = chart.resolve_scale(y='independent') # Aplicar resolve_scale al gráfico combinado
-        
-        # Aplicar propiedades e interactividad al gráfico final
-        chart = chart.properties(
-            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle') 
-        ).interactive().configure_view(
-            fill=current_theme_colors['chart_background'] 
-        ).configure_title(
-            color=current_theme_colors['chart_title'] 
-        ).configure_axis(
-            titleColor=current_theme_colors['chart_axis_title'], 
-            labelColor=current_theme_colors['chart_axis_label'],
-            gridColor=current_theme_colors['chart_grid_color'] # Añadido el color de la cuadrícula
-        ).configure_legend( # Configurar el color del texto de la leyenda
-            titleColor=current_theme_colors['chart_axis_title'],
-            labelColor=current_theme_colors['chart_axis_label']
-        ).configure_text( # Configurar el color de cualquier texto de marca (si se usa)
-            color=current_theme_colors['text_color']
         )
+
+        # Combinar los gráficos y luego aplicar propiedades e interactividad.
+        # Las configuraciones de color de texto para el gráfico ahora se manejan a través del tema de Altair.
+        chart = alt.layer(line_chart, anomaly_points).properties(
+            title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle') 
+        ).interactive()
         
         st.altair_chart(chart, use_container_width=True)
 
