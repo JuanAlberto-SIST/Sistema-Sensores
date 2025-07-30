@@ -135,14 +135,14 @@ THEMES = {
     },
     "light": {
         "app_bg": "#F8F9FA", # Very light gray, almost white
-        "text_color": "#212529", # Dark gray for main text
-        "title_color": "#007BFF", # Bright blue for titles
+        "text_color": "#000000", # PURE BLACK for maximum visibility
+        "title_color": "#000000", # PURE BLACK for titles
         "metric_bg": "#FFFFFF", # White cards
-        "metric_label": "#495057", # Medium dark gray
+        "metric_label": "#000000", # PURE BLACK
         "metric_value": "#007BFF", # Bright blue
         "dataframe_bg": "#FFFFFF",
         "dataframe_th_bg": "#E9ECEF", # Light gray for table headers
-        "dataframe_th_color": "#212529", # Dark text for table headers
+        "dataframe_th_color": "#000000", # PURE BLACK
         "anomaly_highlight": "#DC3545", # Still vivid red
         "alert_success_bg": "#28A745",
         "alert_error_bg": "#DC3545",
@@ -154,9 +154,9 @@ THEMES = {
         "slider_track": "#CED4DA", # Light gray
         "slider_progress_thumb": "#007BFF", # Bright blue
         "slider_thumb_border": "#FFFFFF", # White thumb border
-        "chart_title": "#212529", # Dark text
-        "chart_axis_title": "#495057", # Medium dark text
-        "chart_axis_label": "#495057", # Medium dark text
+        "chart_title": "#000000", # PURE BLACK
+        "chart_axis_title": "#000000", # PURE BLACK
+        "chart_axis_label": "#000000", # PURE BLACK
         "chart_line_colors": ['#007BFF', '#FF8C00', '#20C997', '#6F42C1'], # Blue, Dark Orange, Green, Purple
         "chart_background": "#FFFFFF" # Fondo blanco para la gráfica en modo claro
     }
