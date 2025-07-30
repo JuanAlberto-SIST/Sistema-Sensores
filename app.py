@@ -536,7 +536,6 @@ for i in range(1, 101):
             labelColor=current_theme_colors['chart_axis_label']  # Color de las etiquetas del eje
         )
 
-
         anomaly_points = alt.Chart(df_para_grafico[df_para_grafico['Estado'] == 'ANOMALÍA DETECTADA']).mark_point(
             color=current_theme_colors['anomaly_highlight'], filled=True, size=120, shape='cross' 
         ).encode(
@@ -551,9 +550,9 @@ for i in range(1, 101):
             ]
         )
 
-        chart = alt.layer(line_chart, anomaly_points).resolve_scale(
-            y='independent'
-        )
+        # Aplicar resolve_scale de forma separada al gráfico combinado
+        chart = alt.layer(line_chart, anomaly_points)
+        chart = chart.resolve_scale(y='independent')
         
         st.altair_chart(chart, use_container_width=True)
 
