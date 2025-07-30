@@ -308,20 +308,6 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
 .stSlider label {{
     color: {theme["metric_label"]} !important;
 }}
-/* Force text color inside Altair charts */
-div[data-testid="stVegaLiteChart"] svg text,
-div[data-testid="stVegaLiteChart"] svg .mark-text text,
-div[data-testid="stVegaLiteChart"] svg .mark-axis text,
-div[data-testid="stVegaLiteChart"] svg .mark-legend text,
-div[data-testid="stVegaLiteChart"] svg .mark-title text,
-div[data-testid="stVegaLiteChart"] svg .mark-label text,
-div[data-testid="stVegaLiteChart"] svg .mark-rule text,
-div[data-testid="stVegaLiteChart"] svg .mark-grid text,
-div[data-testid="stVegaLiteChart"] svg .mark-tick text
-{
-    fill: {theme["text_color"]} !important;
-    color: {theme["text_color"]} !important; /* Both fill and color for SVG text */
-}
 </style>
 """
 
