@@ -108,10 +108,10 @@ if 'displayed_suggestion_message' not in st.session_state:
 THEMES = {
     "dark": {
         "app_bg": "#0A192F",
-        "text_color": "#CCD6F6",
-        "title_color": "#64FFDA",
+        "text_color": "#CCD6F6", # Gris azulado claro
+        "title_color": "#64FFDA", # Cian vibrante
         "metric_bg": "#112240",
-        "metric_label": "#8892B0",
+        "metric_label": "#8892B0", # Gris azulado medio
         "metric_value": "#64FFDA",
         "dataframe_bg": "#112240",
         "dataframe_th_bg": "#233554",
@@ -127,9 +127,9 @@ THEMES = {
         "slider_track": "#233554",
         "slider_progress_thumb": "#64FFDA",
         "slider_thumb_border": "#CCD6F6",
-        "chart_title": "#64FFDA",
-        "chart_axis_title": "#CCD6F6",
-        "chart_axis_label": "#8892B0",
+        "chart_title": "#CCD6F6", # Usar text_color para mejor visibilidad
+        "chart_axis_title": "#CCD6F6", # Usar text_color para mejor visibilidad
+        "chart_axis_label": "#CCD6F6", # Usar text_color para mejor visibilidad
         "chart_line_colors": ['#64FFDA', '#FFD700', '#FF4D4D', '#00BFFF']
     },
     "light": {
@@ -382,8 +382,12 @@ current_theme_colors = THEMES[st.session_state['theme']]
 
 
 for i in range(1, 101):
-    alerta_container.empty() 
-    action_suggestion_container.empty()
+    # Estas líneas se movieron aquí para evitar el parpadeo de las alertas
+    # Se limpian los contenedores solo si no hay una alerta activa para mostrar
+    if not st.session_state['displayed_alert_message']:
+        alerta_container.empty() 
+    if not st.session_state['displayed_suggestion_message']:
+        action_suggestion_container.empty()
     
     anomalies_in_this_iteration = False
     
@@ -486,15 +490,16 @@ for i in range(1, 101):
             st.session_state['displayed_alert_message'] = "" 
             st.session_state['displayed_suggestion_message'] = ""
     
+    # Estos se muestran condicionalmente al final del bucle
     if st.session_state['displayed_alert_message']:
         alerta_container.error(st.session_state['displayed_alert_message'])
     else:
-        alerta_container.empty()
+        alerta_container.empty() # Solo limpiar si no hay mensaje persistente
 
     if st.session_state['displayed_suggestion_message']:
         action_suggestion_container.info(st.session_state['displayed_suggestion_message'])
     else:
-        action_suggestion_container.empty()
+        action_suggestion_container.empty() # Solo limpiar si no hay mensaje persistente
 
 
     with grafico_container.container():
