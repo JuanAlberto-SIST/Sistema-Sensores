@@ -8,7 +8,6 @@ import altair as alt
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-# Definir la zona horaria de la Ciudad de México
 MEXICO_CITY_TZ = ZoneInfo("America/Mexico_City")
 
 SENSOR_IDS = ["Sensor_001", "Sensor_002", "Sensor_003", "Sensor_004"] 
@@ -104,14 +103,13 @@ if 'displayed_alert_message' not in st.session_state:
 if 'displayed_suggestion_message' not in st.session_state:
     st.session_state['displayed_suggestion_message'] = ""
 
-# --- Definición de Temas (Claro y Oscuro) ---
 THEMES = {
     "dark": {
         "app_bg": "#0A192F",
-        "text_color": "#CCD6F6", # Gris azulado claro
-        "title_color": "#64FFDA", # Cian vibrante
+        "text_color": "#CCD6F6",
+        "title_color": "#64FFDA",
         "metric_bg": "#112240",
-        "metric_label": "#8892B0", # Gris azulado medio
+        "metric_label": "#8892B0",
         "metric_value": "#64FFDA",
         "dataframe_bg": "#112240",
         "dataframe_th_bg": "#233554",
@@ -127,44 +125,43 @@ THEMES = {
         "slider_track": "#233554",
         "slider_progress_thumb": "#64FFDA",
         "slider_thumb_border": "#CCD6F6",
-        "chart_title": "#CCD6F6", # Usar text_color para mejor visibilidad
-        "chart_axis_title": "#CCD6F6", # Usar text_color para mejor visibilidad
-        "chart_axis_label": "#CCD6F6", # Usar text_color para mejor visibilidad
+        "chart_title": "#CCD6F6",
+        "chart_axis_title": "#CCD6F6",
+        "chart_axis_label": "#CCD6F6",
         "chart_line_colors": ['#64FFDA', '#FFD700', '#FF4D4D', '#00BFFF'],
-        "chart_background": "#112240", # Fondo oscuro para la gráfica en modo oscuro
-        "chart_grid_color": "#233554" # Color de la cuadrícula para tema oscuro
+        "chart_background": "#112240",
+        "chart_grid_color": "#233554"
     },
     "light": {
-        "app_bg": "#F8F9FA", # Very light gray, almost white
-        "text_color": "#000000", # PURE BLACK for maximum visibility
-        "title_color": "#000000", # PURE BLACK for titles
-        "metric_bg": "#FFFFFF", # White cards
-        "metric_label": "#000000", # PURE BLACK
-        "metric_value": "#007BFF", # Bright blue
+        "app_bg": "#F8F9FA",
+        "text_color": "#000000",
+        "title_color": "#000000",
+        "metric_bg": "#FFFFFF",
+        "metric_label": "#000000",
+        "metric_value": "#007BFF",
         "dataframe_bg": "#FFFFFF",
-        "dataframe_th_bg": "#E9ECEF", # Light gray for table headers
-        "dataframe_th_color": "#000000", # PURE BLACK
-        "anomaly_highlight": "#DC3545", # Still vivid red
+        "dataframe_th_bg": "#E9ECEF",
+        "dataframe_th_color": "#000000",
+        "anomaly_highlight": "#DC3545",
         "alert_success_bg": "#28A745",
         "alert_error_bg": "#DC3545",
         "alert_warning_bg": "#FFC107",
         "alert_info_bg": "#17A2B8",
-        "border_color": "#DEE2E6", # Light gray border
-        "button_bg": "#007BFF", # Bright blue button
-        "button_color": "#FFFFFF", # White text on button
-        "slider_track": "#CED4DA", # Light gray
-        "slider_progress_thumb": "#007BFF", # Bright blue
-        "slider_thumb_border": "#FFFFFF", # White thumb border
-        "chart_title": "#000000", # PURE BLACK
-        "chart_axis_title": "#000000", # PURE BLACK
-        "chart_axis_label": "#000000", # PURE BLACK
-        "chart_line_colors": ['#007BFF', '#FF8C00', '#20C997', '#6F42C1'], # Blue, Dark Orange, Green, Purple
-        "chart_background": "#FFFFFF", # Fondo blanco para la gráfica en modo claro
-        "chart_grid_color": "#CED4DA" # Color de la cuadrícula para tema claro
+        "border_color": "#DEE2E6",
+        "button_bg": "#007BFF",
+        "button_color": "#FFFFFF",
+        "slider_track": "#CED4DA",
+        "slider_progress_thumb": "#007BFF",
+        "slider_thumb_border": "#FFFFFF",
+        "chart_title": "#000000",
+        "chart_axis_title": "#000000",
+        "chart_axis_label": "#000000",
+        "chart_line_colors": ['#007BFF', '#FF8C00', '#20C997', '#6F42C1'],
+        "chart_background": "#FFFFFF",
+        "chart_grid_color": "#CED4DA"
     }
 }
 
-# Función para obtener el estilo CSS según el tema seleccionado
 def get_css_style(theme_name):
     theme = THEMES[theme_name]
     return f"""
@@ -177,8 +174,6 @@ h1, h2, h3, h4, h5, h6 {{
     color: {theme["title_color"]} !important;
 }}
 
-/* Targeting specific Streamlit text containers */
-/* More aggressive targeting for all text elements */
 div[data-testid*="stMarkdown"], div[data-testid*="stText"], div[data-testid*="stBlock"] p, div[data-testid*="stBlock"] span, div[data-testid*="stBlock"] label {{
     color: {theme["text_color"]} !important;
 }}
@@ -188,7 +183,7 @@ div[data-testid*="stMarkdown"], div[data-testid*="stText"], div[data-testid*="st
     border-radius: 8px;
     padding: 15px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    color: {theme["text_color"]} !important; /* Asegurar color de texto en métricas */
+    color: {theme["text_color"]} !important;
     border: 1px solid {theme["border_color"]} !important;
 }}
 .stMetric label {{
@@ -203,7 +198,7 @@ div[data-testid*="stMarkdown"], div[data-testid*="stText"], div[data-testid*="st
 
 .dataframe {{
     background-color: {theme["dataframe_bg"]} !important;
-    color: {theme["text_color"]} !important; /* Asegurar color de texto en dataframe */
+    color: {theme["text_color"]} !important;
     border-radius: 8px;
     padding: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
@@ -217,7 +212,7 @@ div[data-testid*="stMarkdown"], div[data-testid*="stText"], div[data-testid*="st
 }}
 .dataframe td {{
     padding: 8px;
-    color: {theme["text_color"]} !important; /* Asegurar color de texto en celdas de tabla */
+    color: {theme["text_color"]} !important;
 }}
 .stDataFrame tbody tr td:nth-child(4) div[data-value*="ANOMALÍA"] {{ 
     background-color: {theme["anomaly_highlight"]} !important;
@@ -238,10 +233,10 @@ div[data-testid="stAlert"] {{
 }}
 div[data-testid="stAlert"] .st-bv div[data-testid="stMarkdownContainer"] {{ 
     font-size: 1.1em;
-    color: {theme["text_color"]} !important; /* Asegurar color de texto en alertas */
+    color: {theme["text_color"]} !important;
 }}
 div[data-testid="stAlert"] div[data-testid="stAlertContent"] {{
-    color: {theme["text_color"]} !important; /* Asegurar color de texto en contenido de alertas */
+    color: {theme["text_color"]} !important;
 }}
 
 div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6z70 {{
@@ -262,16 +257,15 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
 }}
 
 [data-testid="stSidebar"] {{
-    background-color: {theme["dataframe_bg"]} !important; /* Sidebar background matches card/table background */
-    color: {theme["text_color"]} !important; /* Asegurar color de texto en sidebar */
+    background-color: {theme["dataframe_bg"]} !important;
+    color: {theme["text_color"]} !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     padding-top: 20px;
     padding-left: 10px;
     padding-right: 10px;
 }}
-/* More specific targeting for radio button text */
 .stRadio label, .stRadio div[data-testid*="stRadio"] label, .stRadio div[data-testid*="stRadio"] div {{
-    color: {theme["text_color"]} !important; /* Color de texto para las opciones de radio */
+    color: {theme["text_color"]} !important;
 }}
 
 
@@ -286,7 +280,7 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
     transition: all 0.2s ease-in-out;
 }}
 .stButton>button:hover {{
-    background-color: {theme["button_bg"]}CC !important; /* Slightly transparent on hover */
+    background-color: {theme["button_bg"]}CC !important;
     box-shadow: 0 6px 12px rgba(0,0,0,0.4);
     transform: translateY(-2px);
 }}
@@ -311,7 +305,6 @@ div[data-testid="stAlert"].st-emotion-cache-1f06x6a.e1f1d6z70.css-1f06x6a.e1f1d6
 </style>
 """
 
-# Function to create a custom Altair theme
 def create_altair_theme(theme_name):
     theme = THEMES[theme_name]
     return {
@@ -323,23 +316,23 @@ def create_altair_theme(theme_name):
                 "titleColor": theme["chart_axis_title"],
                 "labelColor": theme["chart_axis_label"],
                 "gridColor": theme["chart_grid_color"],
-                "labelOverlap": "false" # Added this
+                "labelOverlap": "false"
             },
             "legend": {
                 "titleColor": theme["chart_axis_title"],
                 "labelColor": theme["chart_axis_label"]
             },
-            "text": { # For text marks
+            "text": {
                 "color": theme["text_color"]
             },
             "view": {
-                "stroke": "transparent", # No border around the chart
+                "stroke": "transparent",
                 "fill": theme["chart_background"]
             },
             "range": {
-                "category": theme["chart_line_colors"] # For line colors
+                "category": theme["chart_line_colors"]
             },
-            "style": { # General style for text
+            "style": {
                 "text": {
                     "fill": theme["text_color"]
                 }
@@ -347,26 +340,21 @@ def create_altair_theme(theme_name):
         }
     }
 
-# Register the custom Altair themes
 alt.themes.register("custom_dark", lambda: create_altair_theme("dark"))
 alt.themes.register("custom_light", lambda: create_altair_theme("light"))
 
 
-# Inicializar el tema en session_state si no existe
 if 'theme' not in st.session_state:
-    st.session_state['theme'] = 'dark' # Tema oscuro por defecto
+    st.session_state['theme'] = 'dark'
 
-# Aplicar el CSS basado en el tema actual
 st.markdown(get_css_style(st.session_state['theme']), unsafe_allow_html=True)
 
-# Aplicar el tema de Altair basado en session state
 if st.session_state['theme'] == 'dark':
     alt.themes.enable("custom_dark")
 else:
     alt.themes.enable("custom_light")
 
 
-# --- Contenido de la Aplicación ---
 st.title("🌡️ Precisa Temp: Sistema de Predicción de Fallos en Sensores (Multi-Sensor)") 
 st.markdown("---") 
 
@@ -419,23 +407,20 @@ status_indicator_container = st.empty()
 
 st.write("Iniciando simulación de lecturas de múltiples sensores de temperatura...")
 
-# --- Selector de Tema en la Barra Lateral ---
 st.sidebar.title("Configuración de Tema")
 selected_theme_option = st.sidebar.radio(
     "Selecciona el tema:",
     ('Oscuro', 'Claro'),
-    index=0 if st.session_state['theme'] == 'dark' else 1 # Marca la opción actual
+    index=0 if st.session_state['theme'] == 'dark' else 1
 )
 
-# Detectar cambio y actualizar el tema
 if selected_theme_option == 'Oscuro' and st.session_state['theme'] != 'dark':
     st.session_state['theme'] = 'dark'
-    st.rerun() # Fuerza la re-ejecución para aplicar el nuevo CSS
+    st.rerun()
 elif selected_theme_option == 'Claro' and st.session_state['theme'] != 'light':
     st.session_state['theme'] = 'light'
-    st.rerun() # Fuerza la re-ejecución para aplicar el nuevo CSS
+    st.rerun()
 
-# Obtener el tema actual para usar sus colores en Altair
 current_theme_colors = THEMES[st.session_state['theme']]
 
 
@@ -505,7 +490,6 @@ for i in range(1, 101):
                 st.session_state['total_anomalies_detected'] += 1 
                 current_time = time.time()
                 if (current_time - st.session_state['last_alert_time'][sensor_id]) > COOLDOWN_SECONDS:
-                    # Corrected variable name from sugerencia_accion_analysis to sugerencia_accion_display
                     send_discord_alert(sensor_id, nueva_lectura, tipo_anomalia_display, sugerencia_accion_display) 
                     st.session_state['last_alert_time'][sensor_id] = current_time 
                     st.session_state['total_alerts_sent'] += 1 
@@ -533,7 +517,6 @@ for i in range(1, 101):
     with kpi_container_alerts.container():
         st.metric(label="Alertas Discord Enviadas", value=st.session_state['total_alerts_sent'])
 
-    # Determinar si algún sensor está en estado de falla persistente
     any_sensor_failed = any(st.session_state['sensor_failure_state'][s_id]['is_failed'] for s_id in SENSOR_IDS)
 
     with status_indicator_container:
@@ -542,27 +525,23 @@ for i in range(1, 101):
         else:
             st.success("🟢 ESTADO ACTUAL: Normal")
     
-    # Lógica para mantener los mensajes de alerta estables
     if any_sensor_failed:
-        if current_iteration_alert_message: # Si se detectó una nueva anomalía en esta iteración
+        if current_iteration_alert_message:
             st.session_state['displayed_alert_message'] = current_iteration_alert_message
             st.session_state['displayed_suggestion_message'] = current_iteration_suggestion_message
-        # Si no hay nueva anomalía en esta iteración pero hay sensores fallando, se mantiene el mensaje anterior
     else:
-        # Si todos los sensores están normales, entonces se limpian los mensajes
         st.session_state['displayed_alert_message'] = "" 
         st.session_state['displayed_suggestion_message'] = ""
     
-    # Mostrar los mensajes de alerta y sugerencia
     if st.session_state['displayed_alert_message']:
         alerta_container.error(st.session_state['displayed_alert_message'])
     else:
-        alerta_container.empty() # Solo limpiar si no hay mensaje persistente
+        alerta_container.empty()
 
     if st.session_state['displayed_suggestion_message']:
         action_suggestion_container.info(st.session_state['displayed_suggestion_message'])
     else:
-        action_suggestion_container.empty() # Corregido: Usar action_suggestion_container.empty()
+        action_suggestion_container.empty()
 
 
     with grafico_container.container():
@@ -596,11 +575,9 @@ for i in range(1, 101):
             ]
         )
 
-        # Combinar los gráficos y luego aplicar propiedades e interactividad.
-        # Las configuraciones de color de texto para el gráfico ahora se manejan a través del tema de Altair.
         chart = alt.layer(line_chart, anomaly_points).properties(
             title=alt.Title(f'Últimas {num_lecturas_grafico // len(SENSOR_IDS)} Lecturas por Sensor', anchor='middle'),
-            background=current_theme_colors['chart_background'] # Explicitly set background here
+            background=current_theme_colors['chart_background']
         ).interactive()
         
         st.altair_chart(chart, use_container_width=True)
